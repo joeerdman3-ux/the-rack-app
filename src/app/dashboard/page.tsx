@@ -1,8 +1,12 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { logSet, deleteSet } from "./actions";
 import { LogForm } from "./LogForm";
+import { StandardsPanel } from "@/components/StandardsPanel";
+import { diagnose, type Bests } from "@/lib/standards/diagnosis";
+import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -30,19 +34,45 @@ export default async function DashboardPage() {
     .eq("logged_date", today)
     .order("logged_at", { ascending: false });
 
+  const { data: hitSets } = await supabase
+    .from("workouts")
+    .select("lift, e1rm")
+    .eq("user_id", user.id)
+    .eq("missed", false)
+    .order("e1rm", { ascending: false });
+
+  const bests: Bests = {};
+  for (const row of hitSets ?? []) {
+    const lift = row.lift as MainLift;
+    if (MAIN_LIFTS.includes(lift) && bests[lift] === undefined) {
+      bests[lift] = row.e1rm;
+    }
+  }
+
+  const diagnosis = diagnose(bests, profile?.gender ?? null, profile?.bodyweight ?? null);
+  const hasProfile = Boolean(profile?.gender && profile?.bodyweight);
+
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <div className="mb-8 flex items-center justify-between">
           <h1 className="text-2xl font-bold text-white">The Rack</h1>
-          <form action={signOut}>
-            <button
-              type="submit"
+          <div className="flex items-center gap-3">
+            <Link
+              href="/settings"
               className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
             >
-              Log out
-            </button>
-          </form>
+              Settings
+            </Link>
+            <form action={signOut}>
+              <button
+                type="submit"
+                className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
+              >
+                Log out
+              </button>
+            </form>
+          </div>
         </div>
 
         <LogForm unit={unit} action={logSet} />
@@ -85,6 +115,8 @@ export default async function DashboardPage() {
             </ul>
           )}
         </section>
+
+        <StandardsPanel diagnosis={diagnosis} unit={unit} hasProfile={hasProfile} />
       </div>
     </div>
   );
