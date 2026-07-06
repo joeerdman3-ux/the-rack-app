@@ -43,4 +43,5 @@ export async function deleteSet(id: string) {
   const supabase = await createClient();
   await supabase.from("workouts").delete().eq("id", id);
   revalidatePath("/dashboard");
+  revalidatePath("/history");
 }
