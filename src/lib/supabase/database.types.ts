@@ -4,6 +4,8 @@
 
 export type Database = {
   public: {
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
     Tables: {
       gyms: {
         Row: {
@@ -19,6 +21,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["gyms"]["Insert"]>;
+        Relationships: [];
       };
       profiles: {
         Row: {
@@ -48,6 +51,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;
+        Relationships: [];
       };
       workouts: {
         Row: {
@@ -77,6 +81,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["workouts"]["Insert"]>;
+        Relationships: [];
       };
       pr_shares: {
         Row: {
@@ -94,6 +99,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["pr_shares"]["Insert"]>;
+        Relationships: [];
       };
       daily_plans: {
         Row: {
@@ -111,6 +117,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["daily_plans"]["Insert"]>;
+        Relationships: [];
       };
       coach_athletes: {
         Row: {
@@ -128,6 +135,7 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["coach_athletes"]["Insert"]>;
+        Relationships: [];
       };
     };
   };
