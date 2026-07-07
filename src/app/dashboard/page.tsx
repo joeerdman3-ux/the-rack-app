@@ -49,7 +49,18 @@ export default async function DashboardPage() {
     }
   }
 
-  const diagnosis = diagnose(bests, profile?.gender ?? null, profile?.bodyweight ?? null);
+  const { data: missedSets } = await supabase
+    .from("workouts")
+    .select("lift, sticking_point")
+    .eq("user_id", user.id)
+    .eq("missed", true);
+
+  const diagnosis = diagnose(
+    bests,
+    profile?.gender ?? null,
+    profile?.bodyweight ?? null,
+    missedSets ?? [],
+  );
   const hasProfile = Boolean(profile?.gender && profile?.bodyweight);
 
   return (

@@ -2,12 +2,15 @@
 
 import { useState } from "react";
 import { BarbellVisualizer } from "@/components/BarbellVisualizer";
-import { MAIN_LIFTS } from "@/lib/lifting/constants";
+import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
+import { STICKING_POINTS_BY_LIFT, STICKING_POINT_LABELS } from "@/lib/standards/prescriptions";
 import type { Unit } from "@/lib/lifting/plates";
 import type { logSet } from "./actions";
 
 export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet }) {
   const [weight, setWeight] = useState("135");
+  const [lift, setLift] = useState<MainLift>(MAIN_LIFTS[0]);
+  const [missed, setMissed] = useState(false);
   const numericWeight = parseFloat(weight) || 0;
   const weightStep = unit === "kg" ? 2.5 : 5;
 
@@ -29,11 +32,13 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
             id="lift"
             name="lift"
             required
+            value={lift}
+            onChange={(e) => setLift(e.target.value as MainLift)}
             className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
           >
-            {MAIN_LIFTS.map((lift) => (
-              <option key={lift} value={lift}>
-                {lift}
+            {MAIN_LIFTS.map((l) => (
+              <option key={l} value={l}>
+                {l}
               </option>
             ))}
           </select>
@@ -96,10 +101,33 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
           <input
             type="checkbox"
             name="missed"
+            checked={missed}
+            onChange={(e) => setMissed(e.target.checked)}
             className="h-4 w-4 rounded border-neutral-700 bg-neutral-950"
           />
           Missed lift
         </label>
+
+        {missed && (
+          <div>
+            <label htmlFor="sticking_point" className="mb-1 block text-sm text-neutral-300">
+              Where did it fail?
+            </label>
+            <select
+              id="sticking_point"
+              name="sticking_point"
+              defaultValue=""
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
+            >
+              <option value="">Not sure / didn&apos;t note it</option>
+              {STICKING_POINTS_BY_LIFT[lift].map((point) => (
+                <option key={point} value={point}>
+                  {STICKING_POINT_LABELS[point]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         <button
           type="submit"

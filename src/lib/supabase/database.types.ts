@@ -63,6 +63,7 @@ export type Database = {
           rpe: number | null;
           e1rm: number;
           missed: boolean;
+          sticking_point: string | null;
           logged_date: string;
           logged_at: string;
           created_at: string;
@@ -76,6 +77,7 @@ export type Database = {
           rpe?: number | null;
           e1rm: number;
           missed?: boolean;
+          sticking_point?: string | null;
           logged_date: string;
           logged_at?: string;
           created_at?: string;
