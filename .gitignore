@@ -37,6 +37,9 @@ yarn-error.log*
 # vercel
 .vercel
 
+# raw data dumps (e.g. OpenPowerlifting bulk CSV) — large, never commit
+/data/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

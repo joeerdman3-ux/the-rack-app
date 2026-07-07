@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Diagnosis } from "@/lib/standards/diagnosis";
-import type { Tier } from "@/lib/standards/tables";
+import { isLowConfidence, type Tier } from "@/lib/standards/tables";
+import type { MainLift } from "@/lib/lifting/constants";
 import type { Unit } from "@/lib/lifting/plates";
 
 const TIER_STYLES: Record<Tier, string> = {
@@ -10,6 +11,10 @@ const TIER_STYLES: Record<Tier, string> = {
   Advanced: "bg-purple-950 text-purple-300",
   Elite: "bg-amber-950 text-amber-300",
 };
+
+function withQualifier(lift: MainLift): string {
+  return isLowConfidence(lift) ? `${lift} (based on limited data)` : lift;
+}
 
 export function StandardsPanel({
   diagnosis,
@@ -35,6 +40,8 @@ export function StandardsPanel({
     );
   }
 
+  const anyLowConfidence = diagnosis.standings.some((s) => isLowConfidence(s.lift));
+
   return (
     <section className="mt-8 space-y-6">
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
@@ -42,7 +49,10 @@ export function StandardsPanel({
         <ul className="space-y-2">
           {diagnosis.standings.map((s) => (
             <li key={s.lift} className="flex items-center justify-between">
-              <span className="text-neutral-300">{s.lift}</span>
+              <span className="text-neutral-300">
+                {s.lift}
+                {isLowConfidence(s.lift) && <span className="text-neutral-600">*</span>}
+              </span>
               <span className="flex items-center gap-2 text-sm">
                 <span className="text-neutral-500">
                   {s.best !== null ? `${s.best}${unit}` : "Not logged yet"}
@@ -56,6 +66,24 @@ export function StandardsPanel({
             </li>
           ))}
         </ul>
+
+        {anyLowConfidence && (
+          <p className="mt-4 text-xs text-neutral-600">
+            * Squat/Bench/Deadlift standards are an unverified approximation pending
+            a rebuild from OpenPowerlifting competition data. Overhead Press
+            standards are crowdsourced estimates, not competition-verified.
+            Squat/Bench/Deadlift data (once rebuilt) will be sourced from{" "}
+            <a
+              href="https://www.openpowerlifting.org"
+              className="underline hover:text-neutral-400"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              OpenPowerlifting
+            </a>{" "}
+            (public domain).
+          </p>
+        )}
       </div>
 
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
@@ -69,8 +97,11 @@ export function StandardsPanel({
           <div className="space-y-3 text-sm">
             {diagnosis.weakestLifts.length > 0 && (
               <p className="text-neutral-300">
-                Lowest tier: <span className="font-semibold text-white">{diagnosis.weakestLifts.join(", ")}</span> —
-                {" "}focus your accessory work here.
+                Lowest tier:{" "}
+                <span className="font-semibold text-white">
+                  {diagnosis.weakestLifts.map(withQualifier).join(", ")}
+                </span>{" "}
+                — focus your accessory work here.
               </p>
             )}
             {diagnosis.laggingRatios.map((r) => (
@@ -82,6 +113,27 @@ export function StandardsPanel({
           </div>
         )}
       </div>
+
+      {diagnosis.stickingPointDiagnosis && (
+        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+          <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+          <p className="mb-4 text-sm text-neutral-400">
+            Most-reported sticking point on {diagnosis.stickingPointDiagnosis.lift}
+            {isLowConfidence(diagnosis.stickingPointDiagnosis.lift) && " (based on limited data)"}:{" "}
+            <span className="text-neutral-300">{diagnosis.stickingPointDiagnosis.label}</span>
+          </p>
+          <ul className="space-y-3">
+            {diagnosis.stickingPointDiagnosis.prescriptions.map((p) => (
+              <li key={p.exercise} className="text-sm">
+                <p className="font-medium text-white">
+                  {p.exercise} <span className="font-normal text-neutral-500">— {p.setsReps}</span>
+                </p>
+                <p className="text-neutral-400">{p.rationale}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   );
 }

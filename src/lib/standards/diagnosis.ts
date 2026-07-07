@@ -1,6 +1,12 @@
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 import { getStandardsTable, type Tier } from "./tables";
 import { getTier, tierIndex } from "./tier";
+import {
+  PRESCRIPTIONS,
+  STICKING_POINT_LABELS,
+  type ExercisePrescription,
+  type StickingPoint,
+} from "./prescriptions";
 
 export type Bests = Partial<Record<MainLift, number>>;
 
@@ -34,16 +40,30 @@ export interface LaggingRatio {
   expected: number;
 }
 
+export interface MissedSet {
+  lift: string;
+  sticking_point: string | null;
+}
+
+export interface StickingPointDiagnosis {
+  lift: MainLift;
+  stickingPoint: StickingPoint;
+  label: string;
+  prescriptions: ExercisePrescription[];
+}
+
 export interface Diagnosis {
   standings: LiftStanding[];
   weakestLifts: MainLift[];
   laggingRatios: LaggingRatio[];
+  stickingPointDiagnosis: StickingPointDiagnosis | null;
 }
 
 export function diagnose(
   bests: Bests,
   gender: "male" | "female" | null,
   bodyweight: number | null,
+  missedSets: MissedSet[] = [],
 ): Diagnosis {
   const standings: LiftStanding[] = MAIN_LIFTS.map((lift) => {
     const best = bests[lift] ?? null;
@@ -74,5 +94,36 @@ export function diagnose(
     }
   }
 
-  return { standings, weakestLifts, laggingRatios };
+  // For the weakest lift, find its most commonly reported sticking point
+  // (from missed sets where one was logged) and pull the matching
+  // prescriptions. No fabricated default — if nothing was ever reported,
+  // this stays null rather than guessing.
+  let stickingPointDiagnosis: StickingPointDiagnosis | null = null;
+  const focusLift = weakestLifts[0];
+  if (focusLift) {
+    const counts = new Map<string, number>();
+    for (const set of missedSets) {
+      if (set.lift !== focusLift || !set.sticking_point) continue;
+      counts.set(set.sticking_point, (counts.get(set.sticking_point) ?? 0) + 1);
+    }
+    let topPoint: string | null = null;
+    let topCount = 0;
+    for (const [point, count] of counts) {
+      if (count > topCount) {
+        topPoint = point;
+        topCount = count;
+      }
+    }
+    if (topPoint) {
+      const stickingPoint = topPoint as StickingPoint;
+      stickingPointDiagnosis = {
+        lift: focusLift,
+        stickingPoint,
+        label: STICKING_POINT_LABELS[stickingPoint],
+        prescriptions: PRESCRIPTIONS[stickingPoint],
+      };
+    }
+  }
+
+  return { standings, weakestLifts, laggingRatios, stickingPointDiagnosis };
 }
