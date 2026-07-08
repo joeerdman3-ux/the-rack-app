@@ -30,6 +30,7 @@ export type Database = {
           bodyweight: number | null;
           unit: "lb" | "kg";
           gender: "male" | "female" | null;
+          birthdate: string | null;
           gym_id: string | null;
           location: string | null;
           instagram: string | null;
@@ -43,6 +44,7 @@ export type Database = {
           bodyweight?: number | null;
           unit?: "lb" | "kg";
           gender?: "male" | "female" | null;
+          birthdate?: string | null;
           gym_id?: string | null;
           location?: string | null;
           instagram?: string | null;
@@ -137,6 +139,38 @@ export type Database = {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["coach_athletes"]["Insert"]>;
+        Relationships: [];
+      };
+      lift_benchmarks: {
+        Row: {
+          Sex: string;
+          age_bucket: string;
+          weight_class: string;
+          n: number | null;
+          squat_p10: number | null;
+          squat_p25: number | null;
+          squat_p50: number | null;
+          squat_p75: number | null;
+          squat_p90: number | null;
+          squat_p95: number | null;
+          squat_p99: number | null;
+          bench_p10: number | null;
+          bench_p25: number | null;
+          bench_p50: number | null;
+          bench_p75: number | null;
+          bench_p90: number | null;
+          bench_p95: number | null;
+          bench_p99: number | null;
+          deadlift_p10: number | null;
+          deadlift_p25: number | null;
+          deadlift_p50: number | null;
+          deadlift_p75: number | null;
+          deadlift_p90: number | null;
+          deadlift_p95: number | null;
+          deadlift_p99: number | null;
+        };
+        Insert: Database["public"]["Tables"]["lift_benchmarks"]["Row"];
+        Update: Partial<Database["public"]["Tables"]["lift_benchmarks"]["Row"]>;
         Relationships: [];
       };
     };

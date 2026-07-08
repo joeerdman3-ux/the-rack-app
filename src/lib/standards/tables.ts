@@ -20,29 +20,29 @@ export interface StandardsMeta {
   source: string;
 }
 
-// Squat/Bench/Deadlift: no live data access in this environment to compute
-// real percentile-derived tables from OpenPowerlifting (data.openpowerlifting.org
-// and its Kaggle mirror are both unreachable here) — these three are still the
-// original memory-reconstructed approximation and are NOT verified. Pending a
-// real rebuild once bodyweight-binned percentile data is available (see
-// scripts/opl-standards.py).
+// Squat/Bench/Deadlift: rebuilt 2026-07-07 from real competition data via the
+// lift_benchmarks table (percentiles by sex/age_bucket/weight_class, sourced
+// from OpenPowerlifting: openpowerlifting.org, public domain, attribution
+// appreciated). See src/lib/standards/benchmarks.ts for the lookup logic —
+// thresholds are absolute kg values per bodyweight bracket, not a flat ratio,
+// so they're computed per-user in diagnosis.ts rather than stored here.
 //
 // Overhead Press: rebuilt 2026-07-06 from crowdsourced 1RM-to-bodyweight
 // ratios (StrengthLevel-style, ~5.6M lifts, cross-validated against multiple
 // independent sources). Not competition-verified, no bodyweight-bin data
-// available, so thresholds are flat rather than bodyweight-interpolated.
+// available, so thresholds stay flat rather than bodyweight-interpolated.
 export const STANDARDS_META: Record<MainLift, StandardsMeta> = {
   Squat: {
-    confidence: "unverified_placeholder",
-    source: "Approximated from memory; pending rebuild from OpenPowerlifting competition data",
+    confidence: "verified_competition",
+    source: "OpenPowerlifting competition results (openpowerlifting.org, public domain)",
   },
   "Bench Press": {
-    confidence: "unverified_placeholder",
-    source: "Approximated from memory; pending rebuild from OpenPowerlifting competition data",
+    confidence: "verified_competition",
+    source: "OpenPowerlifting competition results (openpowerlifting.org, public domain)",
   },
   Deadlift: {
-    confidence: "unverified_placeholder",
-    source: "Approximated from memory; pending rebuild from OpenPowerlifting competition data",
+    confidence: "verified_competition",
+    source: "OpenPowerlifting competition results (openpowerlifting.org, public domain)",
   },
   "Overhead Press": {
     confidence: "crowdsourced",
@@ -50,24 +50,18 @@ export const STANDARDS_META: Record<MainLift, StandardsMeta> = {
   },
 };
 
-// Bodyweight-multiplier thresholds (1RM / bodyweight).
-export const MALE_STANDARDS: Record<MainLift, RatioThresholds> = {
-  Squat: { Novice: 0.75, Intermediate: 1.5, Advanced: 2.0, Elite: 2.5 },
-  "Bench Press": { Novice: 0.75, Intermediate: 1.25, Advanced: 1.75, Elite: 2.0 },
-  Deadlift: { Novice: 1.25, Intermediate: 1.75, Advanced: 2.25, Elite: 2.75 },
-  "Overhead Press": { Novice: 0.5, Intermediate: 0.725, Advanced: 1.0, Elite: 1.25 },
-};
-
-export const FEMALE_STANDARDS: Record<MainLift, RatioThresholds> = {
-  Squat: { Novice: 0.55, Intermediate: 1.0, Advanced: 1.5, Elite: 2.0 },
-  "Bench Press": { Novice: 0.45, Intermediate: 0.75, Advanced: 1.15, Elite: 1.5 },
-  Deadlift: { Novice: 0.95, Intermediate: 1.4, Advanced: 1.9, Elite: 2.35 },
+// Overhead Press is the only lift still on flat bodyweight-multiplier
+// thresholds — Squat/Bench/Deadlift now come from the lift_benchmarks lookup
+// (see src/lib/standards/benchmarks.ts) since real percentile-by-bodyweight
+// data exists for them.
+export const OHP_STANDARDS: Record<"male" | "female", RatioThresholds> = {
+  male: { Novice: 0.5, Intermediate: 0.725, Advanced: 1.0, Elite: 1.25 },
   // ~65% of the male ratios, per the middle of the commonly cited 60-70% band.
-  "Overhead Press": { Novice: 0.33, Intermediate: 0.47, Advanced: 0.65, Elite: 0.81 },
+  female: { Novice: 0.33, Intermediate: 0.47, Advanced: 0.65, Elite: 0.81 },
 };
 
-export function getStandardsTable(gender: "male" | "female"): Record<MainLift, RatioThresholds> {
-  return gender === "male" ? MALE_STANDARDS : FEMALE_STANDARDS;
+export function getOverheadPressThresholds(gender: "male" | "female"): RatioThresholds {
+  return OHP_STANDARDS[gender];
 }
 
 export function isLowConfidence(lift: MainLift): boolean {

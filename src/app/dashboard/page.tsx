@@ -7,6 +7,17 @@ import { LogForm } from "./LogForm";
 import { StandardsPanel } from "@/components/StandardsPanel";
 import { diagnose, type Bests } from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
+import {
+  computeAgeBucket,
+  genderToSex,
+  getSBDThresholdsKg,
+  pickNearestBenchmarkRow,
+  toKg,
+  type SBDLift,
+} from "@/lib/standards/benchmarks";
+import type { RatioThresholds } from "@/lib/standards/tables";
+
+const SBD_LIFTS: SBDLift[] = ["Squat", "Bench Press", "Deadlift"];
 
 export default async function DashboardPage() {
   const supabase = await createClient();
@@ -55,13 +66,42 @@ export default async function DashboardPage() {
     .eq("user_id", user.id)
     .eq("missed", true);
 
+  const gender = profile?.gender ?? null;
+  const bodyweight = profile?.bodyweight ?? null;
+  const birthdate = profile?.birthdate ?? null;
+
+  const sbdThresholdsKg: Partial<Record<SBDLift, RatioThresholds>> = {};
+  if (gender && bodyweight && birthdate) {
+    const sex = genderToSex(gender);
+    const ageBucket = computeAgeBucket(birthdate);
+    const bodyweightKg = toKg(bodyweight, unit);
+
+    const { data: benchmarkRows } = await supabase
+      .from("lift_benchmarks")
+      .select(
+        "weight_class, squat_p25, squat_p50, squat_p75, squat_p90, bench_p25, bench_p50, bench_p75, bench_p90, deadlift_p25, deadlift_p50, deadlift_p75, deadlift_p90",
+      )
+      .eq("Sex", sex)
+      .eq("age_bucket", ageBucket);
+
+    const matchedRow = pickNearestBenchmarkRow(benchmarkRows ?? [], bodyweightKg);
+    if (matchedRow) {
+      for (const lift of SBD_LIFTS) {
+        const thresholds = getSBDThresholdsKg(matchedRow, lift);
+        if (thresholds) sbdThresholdsKg[lift] = thresholds;
+      }
+    }
+  }
+
   const diagnosis = diagnose(
     bests,
-    profile?.gender ?? null,
-    profile?.bodyweight ?? null,
+    gender,
+    bodyweight,
     missedSets ?? [],
+    unit,
+    sbdThresholdsKg,
   );
-  const hasProfile = Boolean(profile?.gender && profile?.bodyweight);
+  const hasProfile = Boolean(gender && bodyweight && birthdate);
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
