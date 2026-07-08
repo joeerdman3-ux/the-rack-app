@@ -1,6 +1,7 @@
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
-import { getStandardsTable, type Tier } from "./tables";
+import { getOverheadPressThresholds, type RatioThresholds, type Tier } from "./tables";
 import { getTier, tierIndex } from "./tier";
+import { toKg, type SBDLift } from "./benchmarks";
 import {
   PRESCRIPTIONS,
   STICKING_POINT_LABELS,
@@ -64,6 +65,8 @@ export function diagnose(
   gender: "male" | "female" | null,
   bodyweight: number | null,
   missedSets: MissedSet[] = [],
+  unit: "lb" | "kg" = "lb",
+  sbdThresholdsKg: Partial<Record<SBDLift, RatioThresholds>> = {},
 ): Diagnosis {
   const standings: LiftStanding[] = MAIN_LIFTS.map((lift) => {
     const best = bests[lift] ?? null;
@@ -71,7 +74,17 @@ export function diagnose(
       return { lift, best, ratio: null, tier: null };
     }
     const ratio = best / bodyweight;
-    const tier = getTier(ratio, getStandardsTable(gender)[lift]);
+
+    if (lift === "Overhead Press") {
+      const tier = getTier(ratio, getOverheadPressThresholds(gender));
+      return { lift, best, ratio, tier };
+    }
+
+    const thresholds = sbdThresholdsKg[lift as SBDLift];
+    if (!thresholds) {
+      return { lift, best, ratio, tier: null };
+    }
+    const tier = getTier(toKg(best, unit), thresholds);
     return { lift, best, ratio, tier };
   });
 

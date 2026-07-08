@@ -30,7 +30,7 @@ export function StandardsPanel({
       <section className="mt-8 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
         <h2 className="mb-2 text-lg font-semibold text-white">Strength standards</h2>
         <p className="text-sm text-neutral-400">
-          Add your bodyweight and gender in{" "}
+          Add your bodyweight, birthdate, and gender in{" "}
           <Link href="/settings" className="text-orange-500 hover:underline">
             Settings
           </Link>{" "}
@@ -67,23 +67,20 @@ export function StandardsPanel({
           ))}
         </ul>
 
-        {anyLowConfidence && (
-          <p className="mt-4 text-xs text-neutral-600">
-            * Squat/Bench/Deadlift standards are an unverified approximation pending
-            a rebuild from OpenPowerlifting competition data. Overhead Press
-            standards are crowdsourced estimates, not competition-verified.
-            Squat/Bench/Deadlift data (once rebuilt) will be sourced from{" "}
-            <a
-              href="https://www.openpowerlifting.org"
-              className="underline hover:text-neutral-400"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              OpenPowerlifting
-            </a>{" "}
-            (public domain).
-          </p>
-        )}
+        <p className="mt-4 text-xs text-neutral-600">
+          Squat/Bench/Deadlift standards are computed from real competition
+          results via{" "}
+          <a
+            href="https://www.openpowerlifting.org"
+            className="underline hover:text-neutral-400"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            OpenPowerlifting
+          </a>{" "}
+          (public domain), matched to your sex, age bracket, and bodyweight class.
+          {anyLowConfidence && " * Overhead Press standards are crowdsourced estimates, not competition-verified."}
+        </p>
       </div>
 
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">

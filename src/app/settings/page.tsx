@@ -27,8 +27,9 @@ export default async function SettingsPage() {
         </div>
 
         <p className="mb-6 text-sm text-neutral-400">
-          Bodyweight and gender are used to calculate your strength standards
-          and weak-point diagnosis — they&apos;re not shared publicly.
+          Bodyweight, birthdate, and gender are used to calculate your
+          strength standards and weak-point diagnosis — they&apos;re not
+          shared publicly.
         </p>
 
         <form action={updateProfile} className="space-y-4">
@@ -61,6 +62,22 @@ export default async function SettingsPage() {
               defaultValue={profile?.bodyweight ?? ""}
               className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
             />
+          </div>
+
+          <div>
+            <label htmlFor="birthdate" className="mb-1 block text-sm text-neutral-300">
+              Birthdate
+            </label>
+            <input
+              id="birthdate"
+              name="birthdate"
+              type="date"
+              defaultValue={profile?.birthdate ?? ""}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+            />
+            <p className="mt-1 text-xs text-neutral-500">
+              Used only to pick the right age bracket for Squat/Bench/Deadlift standards.
+            </p>
           </div>
 
           <div>
