@@ -13,8 +13,6 @@ import {
   getSBDThresholdsKg,
   pickNearestBenchmarkRow,
   toKg,
-  type AgeBucket,
-  type LiftBenchmarkRow,
   type SBDLift,
 } from "@/lib/standards/benchmarks";
 import type { RatioThresholds } from "@/lib/standards/tables";
@@ -73,29 +71,20 @@ export default async function DashboardPage() {
   const birthdate = profile?.birthdate ?? null;
 
   const sbdThresholdsKg: Partial<Record<SBDLift, RatioThresholds>> = {};
-  let debugAgeBucket: AgeBucket | null = null;
-  let debugBodyweightKg: number | null = null;
-  let debugMatchedRow: LiftBenchmarkRow | null = null;
-  let debugSex: "M" | "F" | null = null;
-
   if (gender && bodyweight && birthdate) {
     const sex = genderToSex(gender);
     const ageBucket = computeAgeBucket(birthdate);
     const bodyweightKg = toKg(bodyweight, unit);
-    debugSex = sex;
-    debugAgeBucket = ageBucket;
-    debugBodyweightKg = bodyweightKg;
 
     const { data: benchmarkRows } = await supabase
       .from("lift_benchmarks")
       .select(
-        "weight_class, squat_p10, squat_p25, squat_p50, squat_p75, squat_p90, bench_p10, bench_p25, bench_p50, bench_p75, bench_p90, deadlift_p10, deadlift_p25, deadlift_p50, deadlift_p75, deadlift_p90",
+        "weight_class, squat_p25, squat_p50, squat_p75, squat_p90, bench_p25, bench_p50, bench_p75, bench_p90, deadlift_p25, deadlift_p50, deadlift_p75, deadlift_p90",
       )
       .eq("Sex", sex)
       .eq("age_bucket", ageBucket);
 
     const matchedRow = pickNearestBenchmarkRow(benchmarkRows ?? [], bodyweightKg);
-    debugMatchedRow = matchedRow;
     if (matchedRow) {
       for (const lift of SBD_LIFTS) {
         const thresholds = getSBDThresholdsKg(matchedRow, lift);
@@ -103,32 +92,6 @@ export default async function DashboardPage() {
       }
     }
   }
-
-  // TEMPORARY debug block for the Squat/Bench tier investigation — remove
-  // once resolved.
-  const squatE1rmNative = bests["Squat"] ?? null;
-  const squatDebug = {
-    bodyweight: { value: bodyweight, unit, asKg: debugBodyweightKg },
-    sex: debugSex,
-    birthdate,
-    ageBucket: debugAgeBucket,
-    matchedWeightClass: debugMatchedRow?.weight_class ?? null,
-    squatE1rm: {
-      native: squatE1rmNative,
-      unit,
-      comparedValueKg: squatE1rmNative !== null ? toKg(squatE1rmNative, unit) : null,
-    },
-    squatThresholdsKgFromMatchedRow: debugMatchedRow
-      ? {
-          p10: (debugMatchedRow as unknown as Record<string, number | null>).squat_p10,
-          p25: debugMatchedRow.squat_p25,
-          p50: debugMatchedRow.squat_p50,
-          p75: debugMatchedRow.squat_p75,
-          p90: debugMatchedRow.squat_p90,
-        }
-      : null,
-    resultingSquatTier: sbdThresholdsKg.Squat ?? null,
-  };
 
   const diagnosis = diagnose(
     bests,
@@ -211,15 +174,6 @@ export default async function DashboardPage() {
         </section>
 
         <StandardsPanel diagnosis={diagnosis} unit={unit} hasProfile={hasProfile} />
-
-        <section className="mt-8 rounded-lg border border-amber-800 bg-amber-950/20 p-6">
-          <h2 className="mb-3 text-sm font-semibold text-amber-300">
-            TEMPORARY DEBUG: Squat calculation inputs
-          </h2>
-          <pre className="overflow-x-auto whitespace-pre-wrap text-xs text-neutral-300">
-            {JSON.stringify(squatDebug, null, 2)}
-          </pre>
-        </section>
       </div>
     </div>
   );
