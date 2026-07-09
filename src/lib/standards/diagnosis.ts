@@ -3,11 +3,10 @@ import { getOverheadPressThresholds, type RatioThresholds, type Tier } from "./t
 import { getTier, tierIndex } from "./tier";
 import { toKg, type SBDLift } from "./benchmarks";
 import {
-  PRESCRIPTIONS,
   STICKING_POINT_LABELS,
   type ExercisePrescription,
   type StickingPoint,
-} from "./prescriptions";
+} from "./stickingPoints";
 
 export type Bests = Partial<Record<MainLift, number>>;
 
@@ -108,9 +107,13 @@ export function diagnose(
   }
 
   // For the weakest lift, find its most commonly reported sticking point
-  // (from missed sets where one was logged) and pull the matching
-  // prescriptions. No fabricated default — if nothing was ever reported,
-  // this stays null rather than guessing.
+  // (from missed sets where one was logged). No fabricated default — if
+  // nothing was ever reported, this stays null rather than guessing.
+  //
+  // prescriptions is intentionally left empty here: this function stays
+  // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
+  // for querying sticking_point_prescriptions + exercises for this specific
+  // stickingPoint and filling the array in before rendering.
   let stickingPointDiagnosis: StickingPointDiagnosis | null = null;
   const focusLift = weakestLifts[0];
   if (focusLift) {
@@ -133,7 +136,7 @@ export function diagnose(
         lift: focusLift,
         stickingPoint,
         label: STICKING_POINT_LABELS[stickingPoint],
-        prescriptions: PRESCRIPTIONS[stickingPoint],
+        prescriptions: [],
       };
     }
   }

@@ -1,18 +1,12 @@
 // src/lib/standards/prescriptions.ts
+//
+// Superseded 2026-07-09 by the sticking_point_prescriptions + exercises
+// tables in Supabase (queried in src/app/dashboard/page.tsx, joined via
+// src/lib/standards/stickingPoints.ts's mapPrescriptionRows). Nothing in
+// the app imports PRESCRIPTIONS anymore — left in place as a reference/
+// fallback data set, not wired into diagnosis.ts.
 
-import type { MainLift } from '@/lib/lifting/constants';
-
-export type StickingPoint =
-  | 'bench_off_chest' | 'bench_midrange' | 'bench_lockout'
-  | 'squat_hole' | 'squat_parallel' | 'squat_above_parallel'
-  | 'deadlift_floor' | 'deadlift_below_knee' | 'deadlift_knee' | 'deadlift_lockout'
-  | 'ohp_bottom' | 'ohp_midrange' | 'ohp_lockout';
-
-export interface ExercisePrescription {
-  exercise: string;
-  rationale: string;
-  setsReps: string;
-}
+import type { ExercisePrescription, StickingPoint } from "./stickingPoints";
 
 export const PRESCRIPTIONS: Record<StickingPoint, ExercisePrescription[]> = {
   bench_off_chest: [
@@ -69,27 +63,4 @@ export const PRESCRIPTIONS: Record<StickingPoint, ExercisePrescription[]> = {
     { exercise: 'Pin Press (top pins)', rationale: 'Isolates lockout portion for overload without full-ROM fatigue', setsReps: '4x4-6' },
     { exercise: 'Tricep Dips or Skull Crushers', rationale: 'Triceps are the primary driver of overhead lockout', setsReps: '3x8-10' },
   ],
-};
-
-export const STICKING_POINT_LABELS: Record<StickingPoint, string> = {
-  bench_off_chest: 'Off the chest',
-  bench_midrange: 'Midrange',
-  bench_lockout: 'Lockout',
-  squat_hole: 'The hole (bottom)',
-  squat_parallel: 'Parallel',
-  squat_above_parallel: 'Above parallel',
-  deadlift_floor: 'Off the floor',
-  deadlift_below_knee: 'Below the knee',
-  deadlift_knee: 'At the knee',
-  deadlift_lockout: 'Lockout',
-  ohp_bottom: 'Bottom',
-  ohp_midrange: 'Midrange',
-  ohp_lockout: 'Lockout',
-};
-
-export const STICKING_POINTS_BY_LIFT: Record<MainLift, StickingPoint[]> = {
-  Squat: ['squat_hole', 'squat_parallel', 'squat_above_parallel'],
-  'Bench Press': ['bench_off_chest', 'bench_midrange', 'bench_lockout'],
-  Deadlift: ['deadlift_floor', 'deadlift_below_knee', 'deadlift_knee', 'deadlift_lockout'],
-  'Overhead Press': ['ohp_bottom', 'ohp_midrange', 'ohp_lockout'],
 };
