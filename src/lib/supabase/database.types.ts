@@ -173,6 +173,46 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["lift_benchmarks"]["Row"]>;
         Relationships: [];
       };
+      exercises: {
+        Row: {
+          id: string;
+          name: string;
+          primary_lift: string;
+          movement_pattern: string | null;
+          equipment: string | null;
+          description: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          primary_lift: string;
+          movement_pattern?: string | null;
+          equipment?: string | null;
+          description?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
+        Relationships: [];
+      };
+      sticking_point_prescriptions: {
+        Row: {
+          id: string;
+          sticking_point: string;
+          exercise_id: string;
+          rationale: string;
+          sets_reps: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          sticking_point: string;
+          exercise_id: string;
+          rationale: string;
+          sets_reps: string;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["sticking_point_prescriptions"]["Insert"]>;
+        Relationships: [];
+      };
     };
   };
 };

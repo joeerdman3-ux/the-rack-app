@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { BarbellVisualizer } from "@/components/BarbellVisualizer";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
-import { STICKING_POINTS_BY_LIFT, STICKING_POINT_LABELS } from "@/lib/standards/prescriptions";
+import { STICKING_POINTS_BY_LIFT, STICKING_POINT_LABELS } from "@/lib/standards/stickingPoints";
 import type { Unit } from "@/lib/lifting/plates";
 import type { logSet } from "./actions";
 

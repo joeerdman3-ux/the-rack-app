@@ -16,6 +16,7 @@ import {
   type SBDLift,
 } from "@/lib/standards/benchmarks";
 import type { RatioThresholds } from "@/lib/standards/tables";
+import { mapPrescriptionRows } from "@/lib/standards/stickingPoints";
 
 const SBD_LIFTS: SBDLift[] = ["Squat", "Bench Press", "Deadlift"];
 
@@ -102,6 +103,29 @@ export default async function DashboardPage() {
     sbdThresholdsKg,
   );
   const hasProfile = Boolean(gender && bodyweight && birthdate);
+
+  // diagnose() determines *which* sticking point (if any) but stays DB-free;
+  // fetch its prescriptions here and merge them in before rendering.
+  if (diagnosis.stickingPointDiagnosis) {
+    const { stickingPoint } = diagnosis.stickingPointDiagnosis;
+
+    const { data: prescriptionRows } = await supabase
+      .from("sticking_point_prescriptions")
+      .select("exercise_id, rationale, sets_reps, sort_order")
+      .eq("sticking_point", stickingPoint)
+      .order("sort_order", { ascending: true });
+
+    const exerciseIds = [...new Set((prescriptionRows ?? []).map((r) => r.exercise_id))];
+    const { data: exerciseRows } =
+      exerciseIds.length > 0
+        ? await supabase.from("exercises").select("id, name").in("id", exerciseIds)
+        : { data: [] };
+
+    diagnosis.stickingPointDiagnosis.prescriptions = mapPrescriptionRows(
+      prescriptionRows ?? [],
+      exerciseRows ?? [],
+    );
+  }
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
