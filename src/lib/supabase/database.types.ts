@@ -4,7 +4,16 @@
 
 export type Database = {
   public: {
-    Views: Record<string, never>;
+    Views: {
+      best_lifts: {
+        Row: {
+          user_id: string;
+          lift: string;
+          best_e1rm: number;
+        };
+        Relationships: [];
+      };
+    };
     Functions: Record<string, never>;
     Tables: {
       gyms: {
