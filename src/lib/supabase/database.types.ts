@@ -252,6 +252,72 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["accessory_logs"]["Insert"]>;
         Relationships: [];
       };
+      programs: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["programs"]["Insert"]>;
+        Relationships: [];
+      };
+      program_weeks: {
+        Row: {
+          id: string;
+          program_id: string;
+          week_number: number;
+        };
+        Insert: {
+          id?: string;
+          program_id: string;
+          week_number: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["program_weeks"]["Insert"]>;
+        Relationships: [];
+      };
+      program_sessions: {
+        Row: {
+          id: string;
+          program_week_id: string;
+          session_number: number;
+          name: string | null;
+        };
+        Insert: {
+          id?: string;
+          program_week_id: string;
+          session_number: number;
+          name?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["program_sessions"]["Insert"]>;
+        Relationships: [];
+      };
+      program_exercises: {
+        Row: {
+          id: string;
+          program_session_id: string;
+          exercise_id: string;
+          sets: number;
+          reps: number;
+          percent_of_max: number | null;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          program_session_id: string;
+          exercise_id: string;
+          sets: number;
+          reps: number;
+          percent_of_max?: number | null;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["program_exercises"]["Insert"]>;
+        Relationships: [];
+      };
     };
   };
 };
