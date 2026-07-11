@@ -10,6 +10,8 @@ export async function updateProfile(formData: FormData) {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
+  const nicknameRaw = (formData.get("nickname") as string) || "";
+  const nickname = nicknameRaw.trim().slice(0, 20) || null;
   const bodyweightRaw = formData.get("bodyweight") as string;
   const bodyweight = bodyweightRaw ? parseFloat(bodyweightRaw) : null;
   const gender = (formData.get("gender") as string) || null;
@@ -19,6 +21,7 @@ export async function updateProfile(formData: FormData) {
   await supabase
     .from("profiles")
     .update({
+      nickname,
       bodyweight: bodyweight && bodyweight > 0 ? bodyweight : null,
       gender: gender === "male" || gender === "female" ? gender : null,
       birthdate,
