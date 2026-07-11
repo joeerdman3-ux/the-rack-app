@@ -34,6 +34,23 @@ export default async function SettingsPage() {
 
         <form action={updateProfile} className="space-y-4">
           <div>
+            <label htmlFor="nickname" className="mb-1 block text-sm text-neutral-300">
+              Nickname
+            </label>
+            <input
+              id="nickname"
+              name="nickname"
+              type="text"
+              maxLength={20}
+              defaultValue={profile?.nickname ?? ""}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+            />
+            <p className="mt-1 text-xs text-neutral-500">
+              Shown on Leaderboards. Leave blank to appear as Anonymous.
+            </p>
+          </div>
+
+          <div>
             <label htmlFor="unit" className="mb-1 block text-sm text-neutral-300">
               Units
             </label>
