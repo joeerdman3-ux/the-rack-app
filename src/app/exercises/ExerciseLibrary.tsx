@@ -21,15 +21,25 @@ const PRIMARY_LIFT_LABELS: Record<string, string> = {
   general: "General",
 };
 
-const DIFFICULTIES = ["Beginner", "Intermediate", "Advanced"];
+// Stored lowercase in the DB; labels are capitalized for display only.
+const DIFFICULTIES = ["beginner", "intermediate", "advanced"] as const;
+const DIFFICULTY_LABELS: Record<string, string> = {
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+};
+const NOT_RATED = "not_rated";
 
 // Same badge shape as the strength-standards tier badges in StandardsPanel,
-// just re-colored for a 3-level scale instead of 5.
+// just re-colored for a 3-level scale instead of 5. Untagged exercises (25
+// of the original set predate this column) get the same neutral treatment
+// as the "Untrained" tier badge rather than no badge at all.
 const DIFFICULTY_STYLES: Record<string, string> = {
-  Beginner: "bg-green-950 text-green-300",
-  Intermediate: "bg-blue-950 text-blue-300",
-  Advanced: "bg-purple-950 text-purple-300",
+  beginner: "bg-green-950 text-green-300",
+  intermediate: "bg-blue-950 text-blue-300",
+  advanced: "bg-purple-950 text-purple-300",
 };
+const NOT_RATED_STYLE = "bg-neutral-800 text-neutral-300";
 
 const selectClasses =
   "rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white outline-none focus:border-orange-500";
@@ -59,7 +69,11 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
       if (primaryLift !== "all" && e.primary_lift !== primaryLift) return false;
       if (muscleGroup !== "all" && e.muscle_group !== muscleGroup) return false;
       if (equipment !== "all" && e.equipment !== equipment) return false;
-      if (difficulty !== "all" && e.difficulty !== difficulty) return false;
+      if (difficulty === NOT_RATED) {
+        if (e.difficulty !== null) return false;
+      } else if (difficulty !== "all" && e.difficulty !== difficulty) {
+        return false;
+      }
       return true;
     });
   }, [exercises, search, primaryLift, muscleGroup, equipment, difficulty]);
@@ -123,9 +137,10 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
             <option value="all">All Difficulties</option>
             {DIFFICULTIES.map((d) => (
               <option key={d} value={d}>
-                {d}
+                {DIFFICULTY_LABELS[d]}
               </option>
             ))}
+            <option value={NOT_RATED}>Not rated</option>
           </select>
         </div>
       </div>
@@ -141,15 +156,15 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
             >
               <div className="flex items-center justify-between gap-3">
                 <span className="font-medium text-white">{exercise.name}</span>
-                {exercise.difficulty && (
-                  <span
-                    className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${
-                      DIFFICULTY_STYLES[exercise.difficulty] ?? "bg-neutral-800 text-neutral-300"
-                    }`}
-                  >
-                    {exercise.difficulty}
-                  </span>
-                )}
+                <span
+                  className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${
+                    exercise.difficulty
+                      ? (DIFFICULTY_STYLES[exercise.difficulty] ?? NOT_RATED_STYLE)
+                      : NOT_RATED_STYLE
+                  }`}
+                >
+                  {exercise.difficulty ? DIFFICULTY_LABELS[exercise.difficulty] ?? exercise.difficulty : "Not rated"}
+                </span>
               </div>
               {(exercise.muscle_group || exercise.equipment) && (
                 <p className="mt-1 text-sm text-neutral-500">
