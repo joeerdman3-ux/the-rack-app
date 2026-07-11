@@ -69,7 +69,7 @@ export default async function LeaderboardsPage({
     const { data } = await supabase
       .from("lift_benchmarks")
       .select(
-        "weight_class, squat_p25, squat_p50, squat_p75, squat_p90, bench_p25, bench_p50, bench_p75, bench_p90, deadlift_p25, deadlift_p50, deadlift_p75, deadlift_p90",
+        "weight_class, squat_p10, squat_p25, squat_p50, squat_p75, squat_p90, squat_p95, squat_p99, bench_p10, bench_p25, bench_p50, bench_p75, bench_p90, bench_p95, bench_p99, deadlift_p10, deadlift_p25, deadlift_p50, deadlift_p75, deadlift_p90, deadlift_p95, deadlift_p99",
       )
       .eq("Sex", sex);
     benchmarkRows = data ?? [];
