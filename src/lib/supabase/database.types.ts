@@ -226,6 +226,32 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["sticking_point_prescriptions"]["Insert"]>;
         Relationships: [];
       };
+      accessory_logs: {
+        Row: {
+          id: string;
+          user_id: string;
+          exercise_id: string;
+          weight: number;
+          reps: number;
+          rpe: number | null;
+          notes: string | null;
+          logged_date: string;
+          logged_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          exercise_id: string;
+          weight: number;
+          reps: number;
+          rpe?: number | null;
+          notes?: string | null;
+          logged_date: string;
+          logged_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["accessory_logs"]["Insert"]>;
+        Relationships: [];
+      };
     };
   };
 };

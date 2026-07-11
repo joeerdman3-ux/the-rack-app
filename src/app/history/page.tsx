@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { deleteSet } from "@/app/dashboard/actions";
+import { deleteAccessoryLog } from "@/app/dashboard/accessoryActions";
 import { ProgressChart } from "@/components/ProgressChart";
 import { bestSessionsByLift, weeklyTonnage, isDeloading } from "@/lib/history/aggregate";
 import { MAIN_LIFTS } from "@/lib/lifting/constants";
@@ -36,6 +37,33 @@ export default async function HistoryPage() {
   for (const w of rows) {
     if (!groupedByDate.has(w.logged_date)) groupedByDate.set(w.logged_date, []);
     groupedByDate.get(w.logged_date)!.push(w);
+  }
+
+  // Accessory logs — separate table/flow from workouts, shown in its own
+  // section below rather than merged into the main-lift list above.
+  const { data: accessoryLogs } = await supabase
+    .from("accessory_logs")
+    .select("*")
+    .eq("user_id", user.id)
+    .order("logged_date", { ascending: false })
+    .order("logged_at", { ascending: false });
+
+  const accessoryRows = accessoryLogs ?? [];
+  const accessoryExerciseIds = [...new Set(accessoryRows.map((r) => r.exercise_id))];
+  const { data: accessoryExerciseRows } =
+    accessoryExerciseIds.length > 0
+      ? await supabase.from("exercises").select("id, name").in("id", accessoryExerciseIds)
+      : { data: [] };
+  const accessoryExerciseNameById = new Map(
+    (accessoryExerciseRows ?? []).map((e) => [e.id, e.name]),
+  );
+
+  const accessoryGroupedByDate = new Map<string, typeof accessoryRows>();
+  for (const log of accessoryRows) {
+    if (!accessoryGroupedByDate.has(log.logged_date)) {
+      accessoryGroupedByDate.set(log.logged_date, []);
+    }
+    accessoryGroupedByDate.get(log.logged_date)!.push(log);
   }
 
   return (
@@ -101,6 +129,59 @@ export default async function HistoryPage() {
                           </p>
                         </div>
                         <form action={deleteSet.bind(null, set.id)}>
+                          <button
+                            type="submit"
+                            className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-400 hover:border-red-800 hover:text-red-300"
+                          >
+                            Delete
+                          </button>
+                        </form>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-semibold text-white">Accessory work</h2>
+
+          {accessoryGroupedByDate.size === 0 ? (
+            <p className="text-sm text-neutral-500">No accessory work logged yet.</p>
+          ) : (
+            <div className="space-y-6">
+              {Array.from(accessoryGroupedByDate.entries()).map(([date, logs]) => (
+                <div key={date}>
+                  <h3 className="mb-2 text-sm font-medium text-neutral-400">
+                    {new Date(`${date}T00:00:00Z`).toLocaleDateString("en-US", {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    })}
+                  </h3>
+                  <ul className="space-y-2">
+                    {logs.map((log) => (
+                      <li
+                        key={log.id}
+                        className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+                      >
+                        <div>
+                          <p className="font-medium text-white">
+                            {accessoryExerciseNameById.get(log.exercise_id) ?? "Unknown exercise"}
+                            {" — "}
+                            {log.weight}
+                            {unit} × {log.reps}
+                            {log.rpe ? ` @ RPE ${log.rpe}` : ""}
+                          </p>
+                          {log.notes && (
+                            <p className="text-sm text-neutral-500">{log.notes}</p>
+                          )}
+                        </div>
+                        <form action={deleteAccessoryLog.bind(null, log.id)}>
                           <button
                             type="submit"
                             className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-400 hover:border-red-800 hover:text-red-300"
