@@ -42,18 +42,27 @@ export function parseWeightClass(raw: string): number | null {
 
 export interface LiftBenchmarkRow {
   weight_class: string;
+  squat_p10: number | null;
   squat_p25: number | null;
   squat_p50: number | null;
   squat_p75: number | null;
   squat_p90: number | null;
+  squat_p95: number | null;
+  squat_p99: number | null;
+  bench_p10: number | null;
   bench_p25: number | null;
   bench_p50: number | null;
   bench_p75: number | null;
   bench_p90: number | null;
+  bench_p95: number | null;
+  bench_p99: number | null;
+  deadlift_p10: number | null;
   deadlift_p25: number | null;
   deadlift_p50: number | null;
   deadlift_p75: number | null;
   deadlift_p90: number | null;
+  deadlift_p95: number | null;
+  deadlift_p99: number | null;
 }
 
 // Nearest-numeric-match on the parsed weight_class value. When two rows tie
@@ -120,6 +129,53 @@ export function getSBDThresholdsKg(
     return null;
   }
   return { Novice, Intermediate, Advanced, Elite };
+}
+
+const PERCENTILE_POINTS = [10, 25, 50, 75, 90, 95, 99] as const;
+
+// Estimates where a lifted weight falls among the matched row's percentile
+// columns via linear interpolation between the two nearest points. Purely
+// additive/display logic — does not feed tier calculation, which stays on
+// getSBDThresholdsKg's p25/p50/p75/p90 floors untouched.
+//
+// Returns "<N" below the lowest available point (N is normally 10), "N+"
+// above the highest (normally 99), a rounded integer string for an
+// interpolated value in between, or null if the row has no percentile data
+// for this lift at all.
+export function estimatePercentile(
+  row: LiftBenchmarkRow,
+  lift: SBDLift,
+  liftedWeightKg: number,
+): string | null {
+  const prefix = LIFT_COLUMN_PREFIX[lift];
+  const record = row as unknown as Record<string, number | null>;
+
+  const points = PERCENTILE_POINTS.map((p) => ({ p, value: record[`${prefix}_p${p}`] })).filter(
+    (pt): pt is { p: (typeof PERCENTILE_POINTS)[number]; value: number } => pt.value != null,
+  );
+
+  if (points.length === 0) return null;
+
+  const first = points[0];
+  const last = points[points.length - 1];
+
+  if (liftedWeightKg <= first.value) {
+    return first.p === 10 ? "<10" : `<${first.p}`;
+  }
+  if (liftedWeightKg >= last.value) {
+    return last.p === 99 ? "99+" : `${last.p}+`;
+  }
+
+  for (let i = 0; i < points.length - 1; i++) {
+    const lo = points[i];
+    const hi = points[i + 1];
+    if (liftedWeightKg < lo.value || liftedWeightKg > hi.value) continue;
+    if (hi.value === lo.value) return String(lo.p);
+    const fraction = (liftedWeightKg - lo.value) / (hi.value - lo.value);
+    return String(Math.round(lo.p + fraction * (hi.p - lo.p)));
+  }
+
+  return null;
 }
 
 const LB_PER_KG = 2.20462;

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Diagnosis } from "@/lib/standards/diagnosis";
 import { isLowConfidence, type Tier } from "@/lib/standards/tables";
+import type { SBDLift } from "@/lib/standards/benchmarks";
 import type { MainLift } from "@/lib/lifting/constants";
 import type { Unit } from "@/lib/lifting/plates";
 
@@ -16,14 +17,25 @@ function withQualifier(lift: MainLift): string {
   return isLowConfidence(lift) ? `${lift} (based on limited data)` : lift;
 }
 
+// estimatePercentile returns "<10", "99+", or a plain integer string like "37".
+function formatPercentileText(estimate: string): string {
+  if (estimate === "<10") return "in the bottom 10% of your class";
+  if (estimate === "99+") return "in the top 1% of your class";
+  if (estimate.startsWith("<")) return `below the ${estimate.slice(1)}th percentile of your class`;
+  if (estimate.endsWith("+")) return `above the ${estimate.slice(0, -1)}th percentile of your class`;
+  return `beats ~${estimate}% of lifters in your class`;
+}
+
 export function StandardsPanel({
   diagnosis,
   unit,
   hasProfile,
+  percentileEstimates = {},
 }: {
   diagnosis: Diagnosis;
   unit: Unit;
   hasProfile: boolean;
+  percentileEstimates?: Partial<Record<SBDLift, string>>;
 }) {
   if (!hasProfile) {
     return (
@@ -47,24 +59,34 @@ export function StandardsPanel({
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
         <h2 className="mb-4 text-lg font-semibold text-white">Strength standards</h2>
         <ul className="space-y-2">
-          {diagnosis.standings.map((s) => (
-            <li key={s.lift} className="flex items-center justify-between">
-              <span className="text-neutral-300">
-                {s.lift}
-                {isLowConfidence(s.lift) && <span className="text-neutral-600">*</span>}
-              </span>
-              <span className="flex items-center gap-2 text-sm">
-                <span className="text-neutral-500">
-                  {s.best !== null ? `${s.best}${unit}` : "Not logged yet"}
-                </span>
-                {s.tier && (
-                  <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TIER_STYLES[s.tier]}`}>
-                    {s.tier}
+          {diagnosis.standings.map((s) => {
+            const estimate = percentileEstimates[s.lift as SBDLift];
+            return (
+              <li key={s.lift}>
+                <div className="flex items-center justify-between">
+                  <span className="text-neutral-300">
+                    {s.lift}
+                    {isLowConfidence(s.lift) && <span className="text-neutral-600">*</span>}
                   </span>
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="text-neutral-500">
+                      {s.best !== null ? `${s.best}${unit}` : "Not logged yet"}
+                    </span>
+                    {s.tier && (
+                      <span className={`rounded px-2 py-0.5 text-xs font-semibold ${TIER_STYLES[s.tier]}`}>
+                        {s.tier}
+                      </span>
+                    )}
+                  </span>
+                </div>
+                {estimate && (
+                  <p className="mt-0.5 text-right text-xs text-neutral-500">
+                    {formatPercentileText(estimate)}
+                  </p>
                 )}
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
 
         <p className="mt-4 text-xs text-neutral-600">
