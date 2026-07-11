@@ -3,7 +3,8 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { logSet, deleteSet } from "./actions";
-import { LogForm } from "./LogForm";
+import { logAccessorySet } from "./accessoryActions";
+import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
 import { diagnose, type Bests } from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
@@ -135,6 +136,13 @@ export default async function DashboardPage() {
     );
   }
 
+  // For the Accessory logging picker — unrelated to the main-lift/standards
+  // data above.
+  const { data: accessoryExercises } = await supabase
+    .from("exercises")
+    .select("id, name, muscle_group, equipment")
+    .order("name", { ascending: true });
+
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
       <div className="mx-auto max-w-2xl">
@@ -176,7 +184,12 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        <LogForm unit={unit} action={logSet} />
+        <LoggingSection
+          unit={unit}
+          exercises={accessoryExercises ?? []}
+          logSetAction={logSet}
+          logAccessoryAction={logAccessorySet}
+        />
 
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-semibold text-white">Today&apos;s sets</h2>
