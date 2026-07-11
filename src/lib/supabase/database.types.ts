@@ -190,6 +190,8 @@ export type Database = {
           movement_pattern: string | null;
           equipment: string | null;
           description: string | null;
+          muscle_group: string | null;
+          difficulty: string | null;
         };
         Insert: {
           id?: string;
@@ -198,6 +200,8 @@ export type Database = {
           movement_pattern?: string | null;
           equipment?: string | null;
           description?: string | null;
+          muscle_group?: string | null;
+          difficulty?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
         Relationships: [];

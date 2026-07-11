@@ -146,6 +146,12 @@ export default async function DashboardPage() {
               Leaderboards
             </Link>
             <Link
+              href="/exercises"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
+            >
+              Exercises
+            </Link>
+            <Link
               href="/settings"
               className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
             >
