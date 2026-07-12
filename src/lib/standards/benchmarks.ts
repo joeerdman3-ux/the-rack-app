@@ -184,6 +184,10 @@ export function toKg(value: number, unit: "lb" | "kg"): number {
   return unit === "kg" ? value : value / LB_PER_KG;
 }
 
+export function fromKg(valueKg: number, unit: "lb" | "kg"): number {
+  return unit === "kg" ? valueKg : valueKg * LB_PER_KG;
+}
+
 export function genderToSex(gender: "male" | "female"): "M" | "F" {
   return gender === "male" ? "M" : "F";
 }

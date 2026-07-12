@@ -1,8 +1,15 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateProgramName, addWeek, addSession, addProgramExercise } from "../actions";
+import {
+  updateProgramName,
+  addWeek,
+  addSession,
+  addProgramExercise,
+  setTrainingMax,
+} from "../actions";
 import { ProgramExerciseForm } from "./ProgramExerciseForm";
+import { fromKg } from "@/lib/standards/benchmarks";
 
 interface WeekRow {
   id: string;
@@ -47,6 +54,13 @@ export default async function ProgramPage({
 
   if (!program) notFound();
 
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("unit")
+    .eq("id", user.id)
+    .single();
+  const unit = profile?.unit ?? "lb";
+
   const { data: weeksData } = await supabase
     .from("program_weeks")
     .select("id, week_number")
@@ -88,6 +102,23 @@ export default async function ProgramPage({
     .select("id, name, muscle_group, equipment")
     .order("name", { ascending: true });
 
+  const exerciseIdsNeedingTM = [
+    ...new Set(
+      programExercises.filter((pe) => pe.percent_of_max != null).map((pe) => pe.exercise_id),
+    ),
+  ];
+  const { data: trainingMaxRows } =
+    exerciseIdsNeedingTM.length > 0
+      ? await supabase
+          .from("program_training_maxes")
+          .select("exercise_id, training_max_kg")
+          .eq("program_id", program.id)
+          .in("exercise_id", exerciseIdsNeedingTM)
+      : { data: [] };
+  const trainingMaxKgByExerciseId = new Map(
+    (trainingMaxRows ?? []).map((r) => [r.exercise_id, r.training_max_kg]),
+  );
+
   const sessionsByWeek = new Map<string, SessionRow[]>();
   for (const s of sessions) {
     if (!sessionsByWeek.has(s.program_week_id)) sessionsByWeek.set(s.program_week_id, []);
@@ -104,6 +135,13 @@ export default async function ProgramPage({
 
   const nextWeekNumber =
     weeks.length > 0 ? Math.max(...weeks.map((w) => w.week_number)) + 1 : 1;
+
+  const unsetTMExerciseIds = exerciseIdsNeedingTM.filter(
+    (exId) => !trainingMaxKgByExerciseId.has(exId),
+  );
+  const setTMExerciseIds = exerciseIdsNeedingTM.filter((exId) =>
+    trainingMaxKgByExerciseId.has(exId),
+  );
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
@@ -132,6 +170,76 @@ export default async function ProgramPage({
           </button>
         </form>
 
+        {exerciseIdsNeedingTM.length > 0 && (
+          <div className="mb-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+            <h2 className="mb-4 text-lg font-semibold text-white">Training Maxes</h2>
+            <div className="space-y-3">
+              {unsetTMExerciseIds.map((exId) => (
+                <form
+                  key={exId}
+                  action={setTrainingMax}
+                  className="flex items-center gap-3"
+                >
+                  <input type="hidden" name="program_id" value={program.id} />
+                  <input type="hidden" name="exercise_id" value={exId} />
+                  <span className="flex-1 text-sm text-neutral-300">
+                    {exerciseNameById.get(exId) ?? "Unknown exercise"}
+                  </span>
+                  <input
+                    type="number"
+                    step="0.5"
+                    name="training_max"
+                    placeholder={`TM (${unit})`}
+                    required
+                    className="w-32 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                  />
+                  <button
+                    type="submit"
+                    className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+                  >
+                    Set Training Max
+                  </button>
+                </form>
+              ))}
+              {setTMExerciseIds.map((exId) => {
+                const tmKg = trainingMaxKgByExerciseId.get(exId)!;
+                const tmDisplay = Math.round(fromKg(tmKg, unit) * 10) / 10;
+                return (
+                  <form
+                    key={exId}
+                    action={setTrainingMax}
+                    className="flex items-center gap-3"
+                  >
+                    <input type="hidden" name="program_id" value={program.id} />
+                    <input type="hidden" name="exercise_id" value={exId} />
+                    <span className="flex-1 text-sm text-neutral-300">
+                      {exerciseNameById.get(exId) ?? "Unknown exercise"}
+                      <span className="ml-2 text-xs text-neutral-500">
+                        Current: {tmDisplay}
+                        {unit}
+                      </span>
+                    </span>
+                    <input
+                      type="number"
+                      step="0.5"
+                      name="training_max"
+                      defaultValue={tmDisplay}
+                      required
+                      className="w-32 rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-orange-500"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-300 hover:bg-neutral-800"
+                    >
+                      Update
+                    </button>
+                  </form>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div className="space-y-6">
           {weeks.map((week) => {
             const weekSessions = sessionsByWeek.get(week.id) ?? [];
@@ -157,9 +265,19 @@ export default async function ProgramPage({
                         key={session.id}
                         className="rounded-md border border-neutral-800 bg-neutral-950 p-4"
                       >
-                        <h3 className="mb-2 text-sm font-semibold text-neutral-300">
-                          {session.name || `Session ${session.session_number}`}
-                        </h3>
+                        <div className="mb-2 flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-neutral-300">
+                            {session.name || `Session ${session.session_number}`}
+                          </h3>
+                          {sessionExercises.length > 0 && (
+                            <Link
+                              href={`/programs/${program.id}/session/${session.id}`}
+                              className="text-xs text-orange-500 hover:underline"
+                            >
+                              View Today&apos;s Session
+                            </Link>
+                          )}
+                        </div>
 
                         {sessionExercises.length > 0 && (
                           <ul className="mb-3 space-y-1">

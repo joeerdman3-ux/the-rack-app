@@ -1,13 +1,13 @@
 "use server";
 
-// Program Builder Phase 1: create/view only. No wiring into logging or
-// percent_of_max resolution here — that's Phase 2. Entirely new tables
-// (programs/program_weeks/program_sessions/program_exercises), so nothing
-// here touches workouts, accessory_logs, diagnosis, or leaderboards.
+// Program Builder Phase 1: create/view only. Phase 2 adds training-max
+// storage (setTrainingMax below) for percent_of_max resolution — still no
+// wiring into LogForm/workouts/accessory_logs/diagnosis/leaderboards.
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { toKg } from "@/lib/standards/benchmarks";
 
 export async function createProgram(formData: FormData) {
   const supabase = await createClient();
@@ -129,4 +129,35 @@ export async function addProgramExercise(formData: FormData) {
   });
 
   revalidatePath(`/programs/${programId}`);
+}
+
+export async function setTrainingMax(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const programId = formData.get("program_id") as string;
+  const exerciseId = formData.get("exercise_id") as string;
+  const valueRaw = formData.get("training_max") as string;
+  const value = parseFloat(valueRaw);
+
+  if (!programId || !exerciseId || !Number.isFinite(value) || value <= 0) return;
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("unit")
+    .eq("id", user.id)
+    .single();
+  const unit = profile?.unit ?? "lb";
+
+  const trainingMaxKg = toKg(value, unit);
+
+  await supabase.from("program_training_maxes").upsert(
+    { program_id: programId, exercise_id: exerciseId, training_max_kg: trainingMaxKg },
+    { onConflict: "program_id,exercise_id" },
+  );
+
+  revalidatePath(`/programs/${programId}`, "layout");
 }
