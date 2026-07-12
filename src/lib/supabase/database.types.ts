@@ -318,6 +318,22 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["program_exercises"]["Insert"]>;
         Relationships: [];
       };
+      program_training_maxes: {
+        Row: {
+          id: string;
+          program_id: string;
+          exercise_id: string;
+          training_max_kg: number;
+        };
+        Insert: {
+          id?: string;
+          program_id: string;
+          exercise_id: string;
+          training_max_kg: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["program_training_maxes"]["Insert"]>;
+        Relationships: [];
+      };
     };
   };
 };
