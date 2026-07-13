@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fromKg } from "@/lib/standards/benchmarks";
+import { PRIMARY_LIFT_TO_MAIN_LIFT } from "@/lib/lifting/constants";
 
 interface ProgramExerciseRow {
   id: string;
@@ -10,6 +11,30 @@ interface ProgramExerciseRow {
   reps: number;
   percent_of_max: number | null;
   sort_order: number;
+}
+
+// Routes by exercises.primary_lift, not by where the exercise sits in the
+// program — a variation (e.g. Close-Grip Bench, primary_lift "general")
+// logged as if it were the competition lift would corrupt e1rm/diagnosis/
+// leaderboard data for that lift.
+function buildLogHref(
+  exerciseId: string,
+  primaryLift: string | undefined,
+  reps: number,
+  resolvedWeight: number | null,
+): string {
+  const mainLift = primaryLift ? PRIMARY_LIFT_TO_MAIN_LIFT[primaryLift] : undefined;
+  const params = new URLSearchParams();
+  if (mainLift) {
+    params.set("lift", mainLift);
+  } else {
+    params.set("exerciseId", exerciseId);
+  }
+  params.set("reps", String(reps));
+  if (resolvedWeight != null) {
+    params.set("weight", String(resolvedWeight));
+  }
+  return `/dashboard?${params.toString()}`;
 }
 
 // Phase 2: read-only resolved view. Does not pre-fill LogForm — that's Phase 3.
@@ -63,11 +88,12 @@ export default async function TodaysSessionPage({
   const sessionExercises: ProgramExerciseRow[] = exercisesData ?? [];
 
   const exerciseIds = [...new Set(sessionExercises.map((pe) => pe.exercise_id))];
-  const { data: exerciseNameRows } =
+  const { data: exerciseRows } =
     exerciseIds.length > 0
-      ? await supabase.from("exercises").select("id, name").in("id", exerciseIds)
+      ? await supabase.from("exercises").select("id, name, primary_lift").in("id", exerciseIds)
       : { data: [] };
-  const exerciseNameById = new Map((exerciseNameRows ?? []).map((e) => [e.id, e.name]));
+  const exerciseNameById = new Map((exerciseRows ?? []).map((e) => [e.id, e.name]));
+  const primaryLiftById = new Map((exerciseRows ?? []).map((e) => [e.id, e.primary_lift]));
 
   const tmExerciseIds = [
     ...new Set(
@@ -109,14 +135,21 @@ export default async function TodaysSessionPage({
           <ul className="space-y-3">
             {sessionExercises.map((pe) => {
               const exerciseName = exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise";
+              const primaryLift = primaryLiftById.get(pe.exercise_id);
 
               if (pe.percent_of_max == null) {
+                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, null);
                 return (
                   <li
                     key={pe.id}
-                    className="rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
+                    className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                   >
-                    {exerciseName} — {pe.sets}×{pe.reps}
+                    <span>
+                      {exerciseName} — {pe.sets}×{pe.reps}
+                    </span>
+                    <Link href={logHref} className="text-sm text-orange-500 hover:underline">
+                      Log this set
+                    </Link>
                   </li>
                 );
               }
@@ -124,14 +157,20 @@ export default async function TodaysSessionPage({
               const trainingMaxKg = trainingMaxKgByExerciseId.get(pe.exercise_id);
 
               if (trainingMaxKg == null) {
+                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, null);
                 return (
                   <li
                     key={pe.id}
                     className="rounded-md border border-orange-700 bg-neutral-900 p-4"
                   >
-                    <p className="text-white">
-                      {exerciseName} — {pe.sets}×{pe.reps} @ {pe.percent_of_max}%
-                    </p>
+                    <div className="flex items-center justify-between">
+                      <p className="text-white">
+                        {exerciseName} — {pe.sets}×{pe.reps} @ {pe.percent_of_max}%
+                      </p>
+                      <Link href={logHref} className="text-sm text-orange-500 hover:underline">
+                        Log this set
+                      </Link>
+                    </div>
                     <p className="mt-1 text-sm text-orange-500">
                       No training max set for this exercise yet.{" "}
                       <Link href={`/programs/${program.id}`} className="underline">
@@ -146,18 +185,24 @@ export default async function TodaysSessionPage({
               const resolvedWeight =
                 Math.round(fromKg(trainingMaxKg * (pe.percent_of_max / 100), unit) * 10) / 10;
               const tmDisplay = Math.round(fromKg(trainingMaxKg, unit) * 10) / 10;
+              const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, resolvedWeight);
 
               return (
                 <li
                   key={pe.id}
-                  className="rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
+                  className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                 >
-                  {exerciseName} — {pe.sets}×{pe.reps} @ {resolvedWeight}
-                  {unit}{" "}
-                  <span className="text-sm text-neutral-400">
-                    ({pe.percent_of_max}% of {tmDisplay}
-                    {unit} TM)
+                  <span>
+                    {exerciseName} — {pe.sets}×{pe.reps} @ {resolvedWeight}
+                    {unit}{" "}
+                    <span className="text-sm text-neutral-400">
+                      ({pe.percent_of_max}% of {tmDisplay}
+                      {unit} TM)
+                    </span>
                   </span>
+                  <Link href={logHref} className="text-sm text-orange-500 hover:underline">
+                    Log this set
+                  </Link>
                 </li>
               );
             })}

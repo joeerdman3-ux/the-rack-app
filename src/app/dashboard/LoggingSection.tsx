@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { LogForm } from "./LogForm";
 import { AccessoryLogForm, type AccessoryExerciseOption } from "./AccessoryLogForm";
 import type { Unit } from "@/lib/lifting/plates";
@@ -18,7 +19,12 @@ export function LoggingSection({
   logSetAction: typeof logSet;
   logAccessoryAction: typeof logAccessorySet;
 }) {
-  const [mode, setMode] = useState<"main" | "accessory">("main");
+  // A "Log this set" link from Today's Session carries ?exerciseId= for
+  // accessory-routed exercises — open straight into the Accessory tab.
+  const searchParams = useSearchParams();
+  const [mode, setMode] = useState<"main" | "accessory">(
+    searchParams.get("exerciseId") ? "accessory" : "main",
+  );
 
   return (
     <div>
