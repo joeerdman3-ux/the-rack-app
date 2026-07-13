@@ -31,6 +31,15 @@ export const LB_PLATES: PlateDef[] = [
 
 export const BAR_WEIGHT: Record<Unit, number> = { lb: 45, kg: 20 };
 
+// Smallest total (both-sides) increment loadable with the standard plate
+// set: 2 x 2.5lb or 2 x 1.25kg. Matches LogForm's weight input step.
+export const LOADABLE_INCREMENT: Record<Unit, number> = { lb: 5, kg: 2.5 };
+
+export function roundToLoadableIncrement(weight: number, unit: Unit): number {
+  const increment = LOADABLE_INCREMENT[unit];
+  return Math.round(weight / increment) * increment;
+}
+
 export function getPlateDefs(unit: Unit): PlateDef[] {
   return unit === "kg" ? KG_PLATES : LB_PLATES;
 }
