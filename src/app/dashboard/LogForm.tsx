@@ -1,15 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { BarbellVisualizer } from "@/components/BarbellVisualizer";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 import { STICKING_POINTS_BY_LIFT, STICKING_POINT_LABELS } from "@/lib/standards/stickingPoints";
 import type { Unit } from "@/lib/lifting/plates";
 import type { logSet } from "./actions";
 
+function isMainLift(value: string | null): value is MainLift {
+  return value != null && (MAIN_LIFTS as readonly string[]).includes(value);
+}
+
+// Optional ?lift=&weight=&reps= URL params pre-fill the form on mount (e.g.
+// from Today's Session "Log this set"). Absent params fall back to the
+// original defaults, so plain navigation to /dashboard is unchanged.
 export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet }) {
-  const [weight, setWeight] = useState("135");
-  const [lift, setLift] = useState<MainLift>(MAIN_LIFTS[0]);
+  const searchParams = useSearchParams();
+  const prefillLift = searchParams.get("lift");
+  const prefillWeight = searchParams.get("weight");
+  const prefillReps = searchParams.get("reps");
+
+  const [weight, setWeight] = useState(prefillWeight ?? "135");
+  const [lift, setLift] = useState<MainLift>(isMainLift(prefillLift) ? prefillLift : MAIN_LIFTS[0]);
+  const [reps, setReps] = useState(prefillReps ?? "1");
   const [missed, setMissed] = useState(false);
   const numericWeight = parseFloat(weight) || 0;
   const weightStep = unit === "kg" ? 2.5 : 5;
@@ -75,7 +89,8 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
               step={1}
               min={1}
               required
-              defaultValue={1}
+              value={reps}
+              onChange={(e) => setReps(e.target.value)}
               className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
             />
           </div>

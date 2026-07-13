@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Unit } from "@/lib/lifting/plates";
 import type { logAccessorySet } from "./accessoryActions";
 
@@ -11,6 +12,10 @@ export interface AccessoryExerciseOption {
   equipment: string | null;
 }
 
+// Optional ?exerciseId=&weight=&reps= URL params pre-select the exercise and
+// pre-fill the form on mount (e.g. from Today's Session "Log this set").
+// Absent params fall back to the original defaults, so plain navigation to
+// /dashboard is unchanged.
 export function AccessoryLogForm({
   unit,
   exercises,
@@ -20,8 +25,19 @@ export function AccessoryLogForm({
   exercises: AccessoryExerciseOption[];
   action: typeof logAccessorySet;
 }) {
+  const searchParams = useSearchParams();
+  const prefillExerciseId = searchParams.get("exerciseId");
+  const prefillWeight = searchParams.get("weight");
+  const prefillReps = searchParams.get("reps");
+
   const [search, setSearch] = useState("");
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(
+    prefillExerciseId && exercises.some((e) => e.id === prefillExerciseId)
+      ? prefillExerciseId
+      : null,
+  );
+  const [weight, setWeight] = useState(prefillWeight ?? "");
+  const [reps, setReps] = useState(prefillReps ?? "1");
 
   const selected = exercises.find((e) => e.id === selectedId) ?? null;
 
@@ -102,6 +118,8 @@ export function AccessoryLogForm({
                 step={unit === "kg" ? 2.5 : 5}
                 min={0}
                 required
+                value={weight}
+                onChange={(e) => setWeight(e.target.value)}
                 className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
               />
             </div>
@@ -118,7 +136,8 @@ export function AccessoryLogForm({
                 step={1}
                 min={1}
                 required
-                defaultValue={1}
+                value={reps}
+                onChange={(e) => setReps(e.target.value)}
                 className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
               />
             </div>
