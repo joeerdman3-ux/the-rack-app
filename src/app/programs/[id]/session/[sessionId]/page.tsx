@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { fromKg } from "@/lib/standards/benchmarks";
 import { PRIMARY_LIFT_TO_MAIN_LIFT } from "@/lib/lifting/constants";
+import { roundToLoadableIncrement } from "@/lib/lifting/plates";
 
 interface ProgramExerciseRow {
   id: string;
@@ -185,7 +186,12 @@ export default async function TodaysSessionPage({
               const resolvedWeight =
                 Math.round(fromKg(trainingMaxKg * (pe.percent_of_max / 100), unit) * 10) / 10;
               const tmDisplay = Math.round(fromKg(trainingMaxKg, unit) * 10) / 10;
-              const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, resolvedWeight);
+              const logHref = buildLogHref(
+                pe.exercise_id,
+                primaryLift,
+                pe.reps,
+                roundToLoadableIncrement(resolvedWeight, unit),
+              );
 
               return (
                 <li
