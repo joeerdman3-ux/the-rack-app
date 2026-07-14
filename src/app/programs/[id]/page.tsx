@@ -7,6 +7,7 @@ import {
   addSession,
   addProgramExercise,
   updateProgramExercise,
+  copyWeekToNewWeek,
   setTrainingMax,
 } from "../actions";
 import { ProgramExerciseForm } from "./ProgramExerciseForm";
@@ -251,8 +252,24 @@ export default async function ProgramPage({
                 : 1;
 
             return (
-              <div key={week.id} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
-                <h2 className="mb-4 text-lg font-semibold text-white">Week {week.week_number}</h2>
+              <div
+                key={week.id}
+                id={`week-${week.id}`}
+                className="rounded-lg border border-neutral-800 bg-neutral-900 p-6"
+              >
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-white">Week {week.week_number}</h2>
+                  <form action={copyWeekToNewWeek}>
+                    <input type="hidden" name="program_id" value={program.id} />
+                    <input type="hidden" name="source_week_id" value={week.id} />
+                    <button
+                      type="submit"
+                      className="rounded-md border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800"
+                    >
+                      Copy to new week
+                    </button>
+                  </form>
+                </div>
 
                 <div className="space-y-4">
                   {weekSessions.map((session) => {
