@@ -123,6 +123,12 @@ export default async function SettingsPage() {
             Save
           </button>
         </form>
+
+        <div className="mt-8 border-t border-neutral-800 pt-4">
+          <Link href="/privacy" className="text-sm text-orange-500 hover:underline">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </div>
   );
