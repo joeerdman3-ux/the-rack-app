@@ -131,6 +131,39 @@ export async function addProgramExercise(formData: FormData) {
   revalidatePath(`/programs/${programId}`);
 }
 
+export async function updateProgramExercise(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const programId = formData.get("program_id") as string;
+  const programExerciseId = formData.get("program_exercise_id") as string;
+  const sets = parseInt(formData.get("sets") as string, 10);
+  const reps = parseInt(formData.get("reps") as string, 10);
+  const percentRaw = formData.get("percent_of_max") as string;
+  const percentOfMax = percentRaw ? parseFloat(percentRaw) : null;
+
+  if (
+    !programId ||
+    !programExerciseId ||
+    !Number.isInteger(sets) ||
+    sets < 1 ||
+    !Number.isInteger(reps) ||
+    reps < 1
+  ) {
+    return;
+  }
+
+  await supabase
+    .from("program_exercises")
+    .update({ sets, reps, percent_of_max: percentOfMax })
+    .eq("id", programExerciseId);
+
+  revalidatePath(`/programs/${programId}`, "layout");
+}
+
 export async function setTrainingMax(formData: FormData) {
   const supabase = await createClient();
   const {
