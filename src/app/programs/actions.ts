@@ -175,6 +175,13 @@ export async function copyWeekToNewWeek(formData: FormData) {
   const sourceWeekId = formData.get("source_week_id") as string;
   if (!programId || !sourceWeekId) return;
 
+  const { data: sourceWeek } = await supabase
+    .from("program_weeks")
+    .select("program_id")
+    .eq("id", sourceWeekId)
+    .single();
+  if (!sourceWeek || sourceWeek.program_id !== programId) return;
+
   const { data: weeksData } = await supabase
     .from("program_weeks")
     .select("week_number")
