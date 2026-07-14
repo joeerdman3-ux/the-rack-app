@@ -56,7 +56,7 @@ export interface Diagnosis {
   standings: LiftStanding[];
   weakestLifts: MainLift[];
   laggingRatios: LaggingRatio[];
-  stickingPointDiagnosis: StickingPointDiagnosis | null;
+  stickingPointDiagnoses: StickingPointDiagnosis[];
 }
 
 export function diagnose(
@@ -106,20 +106,23 @@ export function diagnose(
     }
   }
 
-  // For the weakest lift, find its most commonly reported sticking point
-  // (from missed sets where one was logged). No fabricated default — if
-  // nothing was ever reported, this stays null rather than guessing.
+  // For every lift tied for lowest tier, find its most commonly reported
+  // sticking point (from missed sets where one was logged). No fabricated
+  // default — a lift with nothing ever reported for it is simply omitted
+  // from the array rather than guessing. Iterating all of weakestLifts
+  // (not just weakestLifts[0]) ensures a tie doesn't silently drop lifts
+  // ordered later in MAIN_LIFTS (e.g. Overhead Press) from ever getting a
+  // diagnosis when they tie with an earlier lift.
   //
   // prescriptions is intentionally left empty here: this function stays
   // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
-  // for querying sticking_point_prescriptions + exercises for this specific
-  // stickingPoint and filling the array in before rendering.
-  let stickingPointDiagnosis: StickingPointDiagnosis | null = null;
-  const focusLift = weakestLifts[0];
-  if (focusLift) {
+  // for querying sticking_point_prescriptions + exercises for each of these
+  // stickingPoints and filling the arrays in before rendering.
+  const stickingPointDiagnoses: StickingPointDiagnosis[] = [];
+  for (const lift of weakestLifts) {
     const counts = new Map<string, number>();
     for (const set of missedSets) {
-      if (set.lift !== focusLift || !set.sticking_point) continue;
+      if (set.lift !== lift || !set.sticking_point) continue;
       counts.set(set.sticking_point, (counts.get(set.sticking_point) ?? 0) + 1);
     }
     let topPoint: string | null = null;
@@ -132,14 +135,14 @@ export function diagnose(
     }
     if (topPoint) {
       const stickingPoint = topPoint as StickingPoint;
-      stickingPointDiagnosis = {
-        lift: focusLift,
+      stickingPointDiagnoses.push({
+        lift,
         stickingPoint,
         label: STICKING_POINT_LABELS[stickingPoint],
         prescriptions: [],
-      };
+      });
     }
   }
 
-  return { standings, weakestLifts, laggingRatios, stickingPointDiagnosis };
+  return { standings, weakestLifts, laggingRatios, stickingPointDiagnoses };
 }
