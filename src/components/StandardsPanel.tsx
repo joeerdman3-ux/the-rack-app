@@ -133,16 +133,16 @@ export function StandardsPanel({
         )}
       </div>
 
-      {diagnosis.stickingPointDiagnosis && (
-        <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+      {diagnosis.stickingPointDiagnoses.map((d) => (
+        <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
           <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
           <p className="mb-4 text-sm text-neutral-400">
-            Most-reported sticking point on {diagnosis.stickingPointDiagnosis.lift}
-            {isLowConfidence(diagnosis.stickingPointDiagnosis.lift) && " (based on limited data)"}:{" "}
-            <span className="text-neutral-300">{diagnosis.stickingPointDiagnosis.label}</span>
+            Most-reported sticking point on {d.lift}
+            {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
+            <span className="text-neutral-300">{d.label}</span>
           </p>
           <ul className="space-y-3">
-            {diagnosis.stickingPointDiagnosis.prescriptions.map((p) => (
+            {d.prescriptions.map((p) => (
               <li key={p.exercise} className="text-sm">
                 <p className="font-medium text-white">
                   {p.exercise} <span className="font-normal text-neutral-500">— {p.setsReps}</span>
@@ -152,7 +152,7 @@ export function StandardsPanel({
             ))}
           </ul>
         </div>
-      )}
+      ))}
     </section>
   );
 }

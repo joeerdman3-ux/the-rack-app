@@ -113,15 +113,16 @@ export default async function DashboardPage() {
   );
   const hasProfile = Boolean(gender && bodyweight && birthdate);
 
-  // diagnose() determines *which* sticking point (if any) but stays DB-free;
-  // fetch its prescriptions here and merge them in before rendering.
-  if (diagnosis.stickingPointDiagnosis) {
-    const { stickingPoint } = diagnosis.stickingPointDiagnosis;
+  // diagnose() determines *which* sticking points (if any, one per lift
+  // tied for lowest tier) but stays DB-free; fetch prescriptions for all of
+  // them here in one batch and merge them in before rendering.
+  if (diagnosis.stickingPointDiagnoses.length > 0) {
+    const stickingPoints = diagnosis.stickingPointDiagnoses.map((d) => d.stickingPoint);
 
     const { data: prescriptionRows } = await supabase
       .from("sticking_point_prescriptions")
-      .select("exercise_id, rationale, sets_reps, sort_order")
-      .eq("sticking_point", stickingPoint)
+      .select("sticking_point, exercise_id, rationale, sets_reps, sort_order")
+      .in("sticking_point", stickingPoints)
       .order("sort_order", { ascending: true });
 
     const exerciseIds = [...new Set((prescriptionRows ?? []).map((r) => r.exercise_id))];
@@ -130,10 +131,20 @@ export default async function DashboardPage() {
         ? await supabase.from("exercises").select("id, name").in("id", exerciseIds)
         : { data: [] };
 
-    diagnosis.stickingPointDiagnosis.prescriptions = mapPrescriptionRows(
-      prescriptionRows ?? [],
-      exerciseRows ?? [],
-    );
+    type PrescriptionRow = NonNullable<typeof prescriptionRows>[number];
+    const rowsByStickingPoint = new Map<string, PrescriptionRow[]>();
+    for (const row of prescriptionRows ?? []) {
+      const list = rowsByStickingPoint.get(row.sticking_point) ?? [];
+      list.push(row);
+      rowsByStickingPoint.set(row.sticking_point, list);
+    }
+
+    for (const d of diagnosis.stickingPointDiagnoses) {
+      d.prescriptions = mapPrescriptionRows(
+        rowsByStickingPoint.get(d.stickingPoint) ?? [],
+        exerciseRows ?? [],
+      );
+    }
   }
 
   // For the Accessory logging picker — unrelated to the main-lift/standards
