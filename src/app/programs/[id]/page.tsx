@@ -6,9 +6,11 @@ import {
   addWeek,
   addSession,
   addProgramExercise,
+  updateProgramExercise,
   setTrainingMax,
 } from "../actions";
 import { ProgramExerciseForm } from "./ProgramExerciseForm";
+import { ProgramExerciseEditForm } from "./ProgramExerciseEditForm";
 import { fromKg } from "@/lib/standards/benchmarks";
 
 interface WeekRow {
@@ -280,14 +282,18 @@ export default async function ProgramPage({
                         </div>
 
                         {sessionExercises.length > 0 && (
-                          <ul className="mb-3 space-y-1">
+                          <ul className="mb-3 space-y-2">
                             {sessionExercises.map((pe) => (
-                              <li key={pe.id} className="text-sm text-neutral-300">
-                                {exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise"}
-                                {" — "}
-                                {pe.sets}×{pe.reps}
-                                {pe.percent_of_max != null && ` @ ${pe.percent_of_max}%`}
-                              </li>
+                              <ProgramExerciseEditForm
+                                key={pe.id}
+                                id={pe.id}
+                                programId={program.id}
+                                exerciseName={exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise"}
+                                sets={pe.sets}
+                                reps={pe.reps}
+                                percentOfMax={pe.percent_of_max}
+                                action={updateProgramExercise}
+                              />
                             ))}
                           </ul>
                         )}
