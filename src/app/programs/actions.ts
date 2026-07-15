@@ -167,6 +167,33 @@ export async function updateProgramExercise(formData: FormData) {
   revalidatePath(`/programs/${programId}`, "layout");
 }
 
+// Swaps which exercise occupies an existing slot — updates exercise_id only,
+// leaving sets/reps/percent_of_max/sort_order/is_amrap untouched. Neither
+// accessory_logs nor workouts reference program_exercises (accessory_logs
+// stores its own exercise_id per logged row; workouts stores lift as a
+// free-text string, no exercise_id column at all), so past logged sets are
+// entirely unaffected by what a program slot points to going forward.
+export async function swapProgramExercise(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const programId = formData.get("program_id") as string;
+  const programExerciseId = formData.get("program_exercise_id") as string;
+  const exerciseId = formData.get("exercise_id") as string;
+
+  if (!programId || !programExerciseId || !exerciseId) return;
+
+  await supabase
+    .from("program_exercises")
+    .update({ exercise_id: exerciseId })
+    .eq("id", programExerciseId);
+
+  revalidatePath(`/programs/${programId}`, "layout");
+}
+
 export async function copyWeekToNewWeek(formData: FormData) {
   const supabase = await createClient();
   const {

@@ -7,6 +7,7 @@ import {
   addSession,
   addProgramExercise,
   updateProgramExercise,
+  swapProgramExercise,
   copyWeekToNewWeek,
   setTrainingMax,
 } from "../actions";
@@ -309,11 +310,13 @@ export default async function ProgramPage({
                                 id={pe.id}
                                 programId={program.id}
                                 exerciseName={exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise"}
+                                exercises={allExercises ?? []}
                                 sets={pe.sets}
                                 reps={pe.reps}
                                 percentOfMax={pe.percent_of_max}
                                 isAmrap={pe.is_amrap}
                                 action={updateProgramExercise}
+                                swapAction={swapProgramExercise}
                               />
                             ))}
                           </ul>
