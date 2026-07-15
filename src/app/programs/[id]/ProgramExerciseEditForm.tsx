@@ -12,6 +12,7 @@ export function ProgramExerciseEditForm({
   sets,
   reps,
   percentOfMax,
+  isAmrap,
   action,
 }: {
   id: string;
@@ -20,15 +21,17 @@ export function ProgramExerciseEditForm({
   sets: number;
   reps: number;
   percentOfMax: number | null;
+  isAmrap: boolean;
   action: typeof updateProgramExercise;
 }) {
   const [editing, setEditing] = useState(false);
+  const repsDisplay = isAmrap ? `${reps}+` : `${reps}`;
 
   if (!editing) {
     return (
       <li className="flex items-center justify-between text-sm text-neutral-300">
         <span>
-          {exerciseName} — {sets}×{reps}
+          {exerciseName} — {sets}×{repsDisplay}
           {percentOfMax != null && ` @ ${percentOfMax}%`}
         </span>
         <button
@@ -108,6 +111,16 @@ export function ProgramExerciseEditForm({
             />
           </div>
         </div>
+
+        <label className="flex items-center gap-2 text-sm text-neutral-300">
+          <input
+            type="checkbox"
+            name="is_amrap"
+            defaultChecked={isAmrap}
+            className="h-4 w-4 rounded border-neutral-700 bg-neutral-900"
+          />
+          AMRAP (reps is a target, e.g. &quot;5+&quot;)
+        </label>
 
         <div className="flex gap-2">
           <button

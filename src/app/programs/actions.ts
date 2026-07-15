@@ -106,6 +106,7 @@ export async function addProgramExercise(formData: FormData) {
   const percentOfMax = percentRaw ? parseFloat(percentRaw) : null;
   const sortOrderRaw = parseInt(formData.get("sort_order") as string, 10);
   const sortOrder = Number.isFinite(sortOrderRaw) ? sortOrderRaw : 0;
+  const isAmrap = formData.get("is_amrap") === "on";
 
   if (
     !programId ||
@@ -126,6 +127,7 @@ export async function addProgramExercise(formData: FormData) {
     reps,
     percent_of_max: percentOfMax,
     sort_order: sortOrder,
+    is_amrap: isAmrap,
   });
 
   revalidatePath(`/programs/${programId}`);
@@ -144,6 +146,7 @@ export async function updateProgramExercise(formData: FormData) {
   const reps = parseInt(formData.get("reps") as string, 10);
   const percentRaw = formData.get("percent_of_max") as string;
   const percentOfMax = percentRaw ? parseFloat(percentRaw) : null;
+  const isAmrap = formData.get("is_amrap") === "on";
 
   if (
     !programId ||
@@ -158,7 +161,7 @@ export async function updateProgramExercise(formData: FormData) {
 
   await supabase
     .from("program_exercises")
-    .update({ sets, reps, percent_of_max: percentOfMax })
+    .update({ sets, reps, percent_of_max: percentOfMax, is_amrap: isAmrap })
     .eq("id", programExerciseId);
 
   revalidatePath(`/programs/${programId}`, "layout");
