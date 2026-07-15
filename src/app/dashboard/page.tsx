@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { logSet, deleteSet } from "./actions";
-import { logAccessorySet } from "./accessoryActions";
+import { logAccessorySet, deleteAccessoryLog } from "./accessoryActions";
 import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
 import { diagnose, type Bests } from "@/lib/standards/diagnosis";
@@ -43,6 +43,13 @@ export default async function DashboardPage() {
 
   const { data: todaysSets } = await supabase
     .from("workouts")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("logged_date", today)
+    .order("logged_at", { ascending: false });
+
+  const { data: todaysAccessoryLogs } = await supabase
+    .from("accessory_logs")
     .select("*")
     .eq("user_id", user.id)
     .eq("logged_date", today)
@@ -153,6 +160,66 @@ export default async function DashboardPage() {
     .from("exercises")
     .select("id, name, muscle_group, equipment")
     .order("name", { ascending: true });
+  const accessoryExerciseNameById = new Map(
+    (accessoryExercises ?? []).map((e) => [e.id, e.name]),
+  );
+
+  // "Today's sets" merges workouts (main lifts) and accessory_logs into one
+  // time-ordered list. Each entry keeps its source table's own shape/fields
+  // (accessory logs have no e1RM; main-lift sets have no notes) rather than
+  // forcing a shared shape, and is tagged so the render can style/route
+  // Delete differently per type. Purely additive: the main-lift branch below
+  // renders identically to the old todaysSets-only list.
+  type TodaysEntry =
+    | {
+        type: "main";
+        id: string;
+        logged_at: string;
+        lift: string;
+        weight: number;
+        reps: number;
+        rpe: number | null;
+        missed: boolean;
+        e1rm: number;
+      }
+    | {
+        type: "accessory";
+        id: string;
+        logged_at: string;
+        exerciseName: string;
+        weight: number;
+        reps: number;
+        rpe: number | null;
+        notes: string | null;
+      };
+
+  const todaysEntries: TodaysEntry[] = [
+    ...(todaysSets ?? []).map(
+      (set): TodaysEntry => ({
+        type: "main",
+        id: set.id,
+        logged_at: set.logged_at,
+        lift: set.lift,
+        weight: set.weight,
+        reps: set.reps,
+        rpe: set.rpe,
+        missed: set.missed,
+        e1rm: set.e1rm,
+      }),
+    ),
+    ...(todaysAccessoryLogs ?? []).map(
+      (log): TodaysEntry => ({
+        type: "accessory",
+        id: log.id,
+        logged_at: log.logged_at,
+        exerciseName: accessoryExerciseNameById.get(log.exercise_id) ?? "Unknown exercise",
+        weight: log.weight,
+        reps: log.reps,
+        rpe: log.rpe,
+        notes: log.notes,
+      }),
+    ),
+  ].sort((a, b) => (a.logged_at < b.logged_at ? 1 : -1));
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
@@ -211,38 +278,67 @@ export default async function DashboardPage() {
         <section className="mt-8">
           <h2 className="mb-3 text-lg font-semibold text-white">Today&apos;s sets</h2>
 
-          {!todaysSets || todaysSets.length === 0 ? (
+          {todaysEntries.length === 0 ? (
             <p className="text-sm text-neutral-500">Nothing logged yet today.</p>
           ) : (
             <ul className="space-y-2">
-              {todaysSets.map((set) => (
-                <li
-                  key={set.id}
-                  className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
-                >
-                  <div>
-                    <p className="font-medium text-white">
-                      {set.lift} — {set.weight}
-                      {unit} × {set.reps}
-                      {set.rpe ? ` @ RPE ${set.rpe}` : ""}
-                      {set.missed && (
-                        <span className="ml-2 rounded bg-red-950 px-1.5 py-0.5 text-xs text-red-300">
-                          Missed
+              {todaysEntries.map((entry) =>
+                entry.type === "main" ? (
+                  <li
+                    key={`main-${entry.id}`}
+                    className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-medium text-white">
+                        {entry.lift} — {entry.weight}
+                        {unit} × {entry.reps}
+                        {entry.rpe ? ` @ RPE ${entry.rpe}` : ""}
+                        {entry.missed && (
+                          <span className="ml-2 rounded bg-red-950 px-1.5 py-0.5 text-xs text-red-300">
+                            Missed
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-sm text-neutral-500">e1RM: {entry.e1rm}{unit}</p>
+                    </div>
+                    <form action={deleteSet.bind(null, entry.id)}>
+                      <button
+                        type="submit"
+                        className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-400 hover:border-red-800 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </li>
+                ) : (
+                  <li
+                    key={`accessory-${entry.id}`}
+                    className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+                  >
+                    <div>
+                      <p className="font-medium text-white">
+                        <span className="mr-2 rounded bg-neutral-800 px-1.5 py-0.5 text-xs text-neutral-400">
+                          Accessory
                         </span>
+                        {entry.exerciseName} — {entry.weight}
+                        {unit} × {entry.reps}
+                        {entry.rpe ? ` @ RPE ${entry.rpe}` : ""}
+                      </p>
+                      {entry.notes && (
+                        <p className="text-sm text-neutral-500">{entry.notes}</p>
                       )}
-                    </p>
-                    <p className="text-sm text-neutral-500">e1RM: {set.e1rm}{unit}</p>
-                  </div>
-                  <form action={deleteSet.bind(null, set.id)}>
-                    <button
-                      type="submit"
-                      className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-400 hover:border-red-800 hover:text-red-300"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </li>
-              ))}
+                    </div>
+                    <form action={deleteAccessoryLog.bind(null, entry.id)}>
+                      <button
+                        type="submit"
+                        className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-400 hover:border-red-800 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </form>
+                  </li>
+                ),
+              )}
             </ul>
           )}
         </section>
