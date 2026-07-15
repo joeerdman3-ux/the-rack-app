@@ -16,6 +16,10 @@ export interface AccessoryExerciseOption {
 // pre-fill the form on mount (e.g. from Today's Session "Log this set").
 // Absent params fall back to the original defaults, so plain navigation to
 // /dashboard is unchanged.
+//
+// ?repsTarget= is a variant of ?reps= used for an AMRAP set: instead of
+// pre-filling a rep count that would be silently logged if untouched, the
+// reps field starts empty with a "target: N+" placeholder.
 export function AccessoryLogForm({
   unit,
   exercises,
@@ -29,6 +33,7 @@ export function AccessoryLogForm({
   const prefillExerciseId = searchParams.get("exerciseId");
   const prefillWeight = searchParams.get("weight");
   const prefillReps = searchParams.get("reps");
+  const repsTarget = searchParams.get("repsTarget");
 
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(
@@ -37,7 +42,7 @@ export function AccessoryLogForm({
       : null,
   );
   const [weight, setWeight] = useState(prefillWeight ?? "");
-  const [reps, setReps] = useState(prefillReps ?? "1");
+  const [reps, setReps] = useState(prefillReps ?? (repsTarget ? "" : "1"));
 
   const selected = exercises.find((e) => e.id === selectedId) ?? null;
 
@@ -138,6 +143,7 @@ export function AccessoryLogForm({
                 required
                 value={reps}
                 onChange={(e) => setReps(e.target.value)}
+                placeholder={repsTarget ? `target: ${repsTarget}+` : undefined}
                 className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
               />
             </div>
