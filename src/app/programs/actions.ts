@@ -282,6 +282,111 @@ export async function copyWeekToNewWeek(formData: FormData) {
   redirect(`/programs/${programId}#week-${newWeek.id}`);
 }
 
+// Clones a shared program_templates entry into a brand-new real program for
+// the current user — same id-remapping-via-Map structure as
+// copyWeekToNewWeek, one level deeper (template -> weeks -> sessions ->
+// exercises). Deliberately does not set any program_training_maxes: a
+// template has no idea what the person's actual current maxes are, so they
+// set those themselves via the existing "Set Training Max" UI once they see
+// the new program. template_weeks.note/phase_name have no equivalent column
+// on program_weeks, so they are not carried over.
+export async function applyTemplate(formData: FormData) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const templateId = formData.get("template_id") as string;
+  const name = ((formData.get("name") as string) || "").trim();
+  if (!templateId || !name) return;
+
+  const { data: newProgram, error: programError } = await supabase
+    .from("programs")
+    .insert({ user_id: user.id, name })
+    .select("id")
+    .single();
+  if (programError || !newProgram) return;
+
+  const { data: templateWeeks } = await supabase
+    .from("template_weeks")
+    .select("id, week_number")
+    .eq("template_id", templateId)
+    .order("week_number", { ascending: true });
+
+  const weekIdMap = new Map<string, string>();
+  for (const week of templateWeeks ?? []) {
+    const { data: newWeek, error: weekError } = await supabase
+      .from("program_weeks")
+      .insert({ program_id: newProgram.id, week_number: week.week_number })
+      .select("id")
+      .single();
+    if (weekError || !newWeek) continue;
+    weekIdMap.set(week.id, newWeek.id);
+  }
+
+  const templateWeekIds = [...weekIdMap.keys()];
+  const { data: templateSessions } =
+    templateWeekIds.length > 0
+      ? await supabase
+          .from("template_sessions")
+          .select("id, template_week_id, session_number, name")
+          .in("template_week_id", templateWeekIds)
+          .order("session_number", { ascending: true })
+      : { data: [] };
+
+  const sessionIdMap = new Map<string, string>();
+  for (const session of templateSessions ?? []) {
+    const newWeekId = weekIdMap.get(session.template_week_id);
+    if (!newWeekId) continue;
+    const { data: newSession, error: sessionError } = await supabase
+      .from("program_sessions")
+      .insert({
+        program_week_id: newWeekId,
+        session_number: session.session_number,
+        name: session.name,
+      })
+      .select("id")
+      .single();
+    if (sessionError || !newSession) continue;
+    sessionIdMap.set(session.id, newSession.id);
+  }
+
+  const templateSessionIds = [...sessionIdMap.keys()];
+  const { data: templateExercisesData } =
+    templateSessionIds.length > 0
+      ? await supabase
+          .from("template_exercises")
+          .select(
+            "template_session_id, exercise_id, sets, reps, percent_of_max, is_amrap, sort_order",
+          )
+          .in("template_session_id", templateSessionIds)
+      : { data: [] };
+
+  const newTemplateExercises = (templateExercisesData ?? [])
+    .map((te) => {
+      const newSessionId = sessionIdMap.get(te.template_session_id);
+      if (!newSessionId) return null;
+      return {
+        program_session_id: newSessionId,
+        exercise_id: te.exercise_id,
+        sets: te.sets,
+        reps: te.reps,
+        percent_of_max: te.percent_of_max,
+        is_amrap: te.is_amrap,
+        sort_order: te.sort_order,
+      };
+    })
+    .filter((te): te is NonNullable<typeof te> => te !== null);
+
+  if (newTemplateExercises.length > 0) {
+    await supabase.from("program_exercises").insert(newTemplateExercises);
+  }
+
+  revalidatePath("/programs");
+  redirect(`/programs/${newProgram.id}`);
+}
+
 export async function setTrainingMax(formData: FormData) {
   const supabase = await createClient();
   const {
