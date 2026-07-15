@@ -271,11 +271,15 @@ export type Database = {
           id: string;
           program_id: string;
           week_number: number;
+          note: string | null;
+          phase_name: string | null;
         };
         Insert: {
           id?: string;
           program_id: string;
           week_number: number;
+          note?: string | null;
+          phase_name?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["program_weeks"]["Insert"]>;
         Relationships: [];

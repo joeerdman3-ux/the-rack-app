@@ -288,8 +288,8 @@ export async function copyWeekToNewWeek(formData: FormData) {
 // exercises). Deliberately does not set any program_training_maxes: a
 // template has no idea what the person's actual current maxes are, so they
 // set those themselves via the existing "Set Training Max" UI once they see
-// the new program. template_weeks.note/phase_name have no equivalent column
-// on program_weeks, so they are not carried over.
+// the new program. template_weeks.note/phase_name are carried over onto the
+// cloned program_weeks rows so a template's guidance text isn't lost.
 export async function applyTemplate(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -310,7 +310,7 @@ export async function applyTemplate(formData: FormData) {
 
   const { data: templateWeeks } = await supabase
     .from("template_weeks")
-    .select("id, week_number")
+    .select("id, week_number, note, phase_name")
     .eq("template_id", templateId)
     .order("week_number", { ascending: true });
 
@@ -318,7 +318,12 @@ export async function applyTemplate(formData: FormData) {
   for (const week of templateWeeks ?? []) {
     const { data: newWeek, error: weekError } = await supabase
       .from("program_weeks")
-      .insert({ program_id: newProgram.id, week_number: week.week_number })
+      .insert({
+        program_id: newProgram.id,
+        week_number: week.week_number,
+        note: week.note,
+        phase_name: week.phase_name,
+      })
       .select("id")
       .single();
     if (weekError || !newWeek) continue;
