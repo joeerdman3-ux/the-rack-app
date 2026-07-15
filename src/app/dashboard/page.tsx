@@ -246,6 +246,12 @@ export default async function DashboardPage() {
               Exercises
             </Link>
             <Link
+              href="/templates"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
+            >
+              Templates
+            </Link>
+            <Link
               href="/programs"
               className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
             >
