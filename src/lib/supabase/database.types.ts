@@ -271,11 +271,15 @@ export type Database = {
           id: string;
           program_id: string;
           week_number: number;
+          note: string | null;
+          phase_name: string | null;
         };
         Insert: {
           id?: string;
           program_id: string;
           week_number: number;
+          note?: string | null;
+          phase_name?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["program_weeks"]["Insert"]>;
         Relationships: [];
@@ -334,6 +338,82 @@ export type Database = {
           training_max_kg: number;
         };
         Update: Partial<Database["public"]["Tables"]["program_training_maxes"]["Insert"]>;
+        Relationships: [];
+      };
+      program_templates: {
+        Row: {
+          id: string;
+          name: string;
+          description: string | null;
+          source_attribution: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          description?: string | null;
+          source_attribution?: string | null;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["program_templates"]["Insert"]>;
+        Relationships: [];
+      };
+      template_weeks: {
+        Row: {
+          id: string;
+          template_id: string;
+          week_number: number;
+          phase_name: string | null;
+          note: string | null;
+        };
+        Insert: {
+          id?: string;
+          template_id: string;
+          week_number: number;
+          phase_name?: string | null;
+          note?: string | null;
+        };
+        Update: Partial<Database["public"]["Tables"]["template_weeks"]["Insert"]>;
+        Relationships: [];
+      };
+      template_sessions: {
+        Row: {
+          id: string;
+          template_week_id: string;
+          session_number: number;
+          name: string;
+        };
+        Insert: {
+          id?: string;
+          template_week_id: string;
+          session_number: number;
+          name: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["template_sessions"]["Insert"]>;
+        Relationships: [];
+      };
+      template_exercises: {
+        Row: {
+          id: string;
+          template_session_id: string;
+          exercise_id: string;
+          sets: number;
+          reps: number;
+          percent_of_max: number | null;
+          is_amrap: boolean;
+          sort_order: number;
+        };
+        Insert: {
+          id?: string;
+          template_session_id: string;
+          exercise_id: string;
+          sets: number;
+          reps: number;
+          percent_of_max?: number | null;
+          is_amrap?: boolean;
+          sort_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["template_exercises"]["Insert"]>;
         Relationships: [];
       };
     };
