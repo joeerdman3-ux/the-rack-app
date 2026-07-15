@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { updateProgramExercise } from "../actions";
+import type { updateProgramExercise, swapProgramExercise } from "../actions";
 import { formatSetsReps } from "@/lib/programs/setsReps";
+import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
 
 // Editing existing values only — no reordering/add/remove here, that stays
 // in ProgramExerciseForm (add) and the plain exercise list (no delete yet).
@@ -10,22 +11,27 @@ export function ProgramExerciseEditForm({
   id,
   programId,
   exerciseName,
+  exercises,
   sets,
   reps,
   percentOfMax,
   isAmrap,
   action,
+  swapAction,
 }: {
   id: string;
   programId: string;
   exerciseName: string;
+  exercises: ExercisePickerOption[];
   sets: number;
   reps: number;
   percentOfMax: number | null;
   isAmrap: boolean;
   action: typeof updateProgramExercise;
+  swapAction: typeof swapProgramExercise;
 }) {
   const [editing, setEditing] = useState(false);
+  const [changingExercise, setChangingExercise] = useState(false);
   const setsRepsDisplay = formatSetsReps(sets, reps, isAmrap);
 
   if (!editing) {
@@ -48,6 +54,40 @@ export function ProgramExerciseEditForm({
 
   return (
     <li className="rounded-md border border-neutral-800 bg-neutral-950 p-3">
+      {changingExercise ? (
+        <div className="mb-3">
+          <ExerciseSearchPicker
+            exercises={exercises}
+            onSelect={async (exercise) => {
+              const swapFormData = new FormData();
+              swapFormData.set("program_id", programId);
+              swapFormData.set("program_exercise_id", id);
+              swapFormData.set("exercise_id", exercise.id);
+              await swapAction(swapFormData);
+              setChangingExercise(false);
+            }}
+          />
+          <button
+            type="button"
+            onClick={() => setChangingExercise(false)}
+            className="mt-2 text-xs text-neutral-500 hover:underline"
+          >
+            Cancel
+          </button>
+        </div>
+      ) : (
+        <div className="mb-3 flex items-center justify-between">
+          <p className="text-sm text-white">{exerciseName}</p>
+          <button
+            type="button"
+            onClick={() => setChangingExercise(true)}
+            className="text-xs text-orange-500 hover:underline"
+          >
+            Change exercise
+          </button>
+        </div>
+      )}
+
       <form
         action={async (formData) => {
           await action(formData);
@@ -57,8 +97,6 @@ export function ProgramExerciseEditForm({
       >
         <input type="hidden" name="program_id" value={programId} />
         <input type="hidden" name="program_exercise_id" value={id} />
-
-        <p className="text-sm text-white">{exerciseName}</p>
 
         <div className="grid grid-cols-3 gap-3">
           <div>
