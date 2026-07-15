@@ -122,6 +122,15 @@ export function ProgramExerciseForm({
             </div>
           </div>
 
+          <label className="flex items-center gap-2 text-sm text-neutral-300">
+            <input
+              type="checkbox"
+              name="is_amrap"
+              className="h-4 w-4 rounded border-neutral-700 bg-neutral-900"
+            />
+            AMRAP (reps is a target, e.g. &quot;5+&quot;)
+          </label>
+
           <button
             type="submit"
             className="w-full rounded-md bg-orange-600 px-3 py-2 font-semibold text-white hover:bg-orange-500"

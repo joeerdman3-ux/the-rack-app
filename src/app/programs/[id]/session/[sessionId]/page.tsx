@@ -12,6 +12,7 @@ interface ProgramExerciseRow {
   reps: number;
   percent_of_max: number | null;
   sort_order: number;
+  is_amrap: boolean;
 }
 
 // Routes by exercises.primary_lift, not by where the exercise sits in the
@@ -83,7 +84,7 @@ export default async function TodaysSessionPage({
 
   const { data: exercisesData } = await supabase
     .from("program_exercises")
-    .select("id, exercise_id, sets, reps, percent_of_max, sort_order")
+    .select("id, exercise_id, sets, reps, percent_of_max, sort_order, is_amrap")
     .eq("program_session_id", session.id)
     .order("sort_order", { ascending: true });
   const sessionExercises: ProgramExerciseRow[] = exercisesData ?? [];
@@ -137,6 +138,7 @@ export default async function TodaysSessionPage({
             {sessionExercises.map((pe) => {
               const exerciseName = exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise";
               const primaryLift = primaryLiftById.get(pe.exercise_id);
+              const repsDisplay = pe.is_amrap ? `${pe.reps}+` : `${pe.reps}`;
 
               if (pe.percent_of_max == null) {
                 const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, null);
@@ -146,7 +148,7 @@ export default async function TodaysSessionPage({
                     className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                   >
                     <span>
-                      {exerciseName} — {pe.sets}×{pe.reps}
+                      {exerciseName} — {pe.sets}×{repsDisplay}
                     </span>
                     <Link href={logHref} className="text-sm text-orange-500 hover:underline">
                       Log this set
@@ -166,7 +168,7 @@ export default async function TodaysSessionPage({
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-white">
-                        {exerciseName} — {pe.sets}×{pe.reps} @ {pe.percent_of_max}%
+                        {exerciseName} — {pe.sets}×{repsDisplay} @ {pe.percent_of_max}%
                       </p>
                       <Link href={logHref} className="text-sm text-orange-500 hover:underline">
                         Log this set
@@ -199,7 +201,7 @@ export default async function TodaysSessionPage({
                   className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                 >
                   <span>
-                    {exerciseName} — {pe.sets}×{pe.reps} @ {resolvedWeight}
+                    {exerciseName} — {pe.sets}×{repsDisplay} @ {resolvedWeight}
                     {unit}{" "}
                     <span className="text-sm text-neutral-400">
                       ({pe.percent_of_max}% of {tmDisplay}

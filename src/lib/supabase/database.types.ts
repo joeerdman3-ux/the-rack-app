@@ -305,6 +305,7 @@ export type Database = {
           reps: number;
           percent_of_max: number | null;
           sort_order: number;
+          is_amrap: boolean;
         };
         Insert: {
           id?: string;
@@ -314,6 +315,7 @@ export type Database = {
           reps: number;
           percent_of_max?: number | null;
           sort_order?: number;
+          is_amrap?: boolean;
         };
         Update: Partial<Database["public"]["Tables"]["program_exercises"]["Insert"]>;
         Relationships: [];

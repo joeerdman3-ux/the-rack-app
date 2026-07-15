@@ -34,6 +34,7 @@ interface ProgramExerciseRow {
   reps: number;
   percent_of_max: number | null;
   sort_order: number;
+  is_amrap: boolean;
 }
 
 export default async function ProgramPage({
@@ -87,7 +88,9 @@ export default async function ProgramPage({
     sessionIds.length > 0
       ? await supabase
           .from("program_exercises")
-          .select("id, program_session_id, exercise_id, sets, reps, percent_of_max, sort_order")
+          .select(
+            "id, program_session_id, exercise_id, sets, reps, percent_of_max, sort_order, is_amrap",
+          )
           .in("program_session_id", sessionIds)
           .order("sort_order", { ascending: true })
       : { data: [] as ProgramExerciseRow[] };
@@ -309,6 +312,7 @@ export default async function ProgramPage({
                                 sets={pe.sets}
                                 reps={pe.reps}
                                 percentOfMax={pe.percent_of_max}
+                                isAmrap={pe.is_amrap}
                                 action={updateProgramExercise}
                               />
                             ))}
