@@ -291,6 +291,9 @@ export async function copyWeekToNewWeek(formData: FormData) {
 // the new program. template_weeks.note/phase_name are carried over onto the
 // cloned program_weeks rows so a template's guidance text isn't lost.
 export async function applyTemplate(formData: FormData) {
+  // TEMP DEBUG — remove once the "Create Program" no-op bug is diagnosed.
+  console.error("[applyTemplate] invoked");
+
   const supabase = await createClient();
   const {
     data: { user },
@@ -299,20 +302,32 @@ export async function applyTemplate(formData: FormData) {
 
   const templateId = formData.get("template_id") as string;
   const name = ((formData.get("name") as string) || "").trim();
-  if (!templateId || !name) return;
+  console.error("[applyTemplate] templateId =", templateId, "name =", JSON.stringify(name));
+  if (!templateId || !name) {
+    console.error("[applyTemplate] EXIT: missing templateId or empty name after trim");
+    return;
+  }
 
   const { data: newProgram, error: programError } = await supabase
     .from("programs")
     .insert({ user_id: user.id, name })
     .select("id")
     .single();
-  if (programError || !newProgram) return;
+  console.error("[applyTemplate] programs insert:", { newProgram, programError });
+  if (programError || !newProgram) {
+    console.error("[applyTemplate] EXIT: programs insert failed — see programError above");
+    return;
+  }
 
-  const { data: templateWeeks } = await supabase
+  const { data: templateWeeks, error: templateWeeksError } = await supabase
     .from("template_weeks")
     .select("id, week_number, note, phase_name")
     .eq("template_id", templateId)
     .order("week_number", { ascending: true });
+  console.error("[applyTemplate] template_weeks fetch:", {
+    count: templateWeeks?.length ?? 0,
+    templateWeeksError,
+  });
 
   const weekIdMap = new Map<string, string>();
   for (const week of templateWeeks ?? []) {
@@ -388,6 +403,16 @@ export async function applyTemplate(formData: FormData) {
     await supabase.from("program_exercises").insert(newTemplateExercises);
   }
 
+  console.error(
+    "[applyTemplate] cloned",
+    weekIdMap.size,
+    "weeks,",
+    sessionIdMap.size,
+    "sessions,",
+    newTemplateExercises.length,
+    "exercises — redirecting to",
+    `/programs/${newProgram.id}`,
+  );
   revalidatePath("/programs");
   redirect(`/programs/${newProgram.id}`);
 }
