@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { fromKg } from "@/lib/standards/benchmarks";
 import { PRIMARY_LIFT_TO_MAIN_LIFT } from "@/lib/lifting/constants";
 import { roundToLoadableIncrement } from "@/lib/lifting/plates";
+import { formatSetsReps } from "@/lib/programs/setsReps";
 
 interface ProgramExerciseRow {
   id: string;
@@ -19,10 +20,16 @@ interface ProgramExerciseRow {
 // program — a variation (e.g. Close-Grip Bench, primary_lift "general")
 // logged as if it were the competition lift would corrupt e1rm/diagnosis/
 // leaderboard data for that lift.
+// When isAmrap is true, the row's last set is AMRAP-to-target (see
+// formatSetsReps) — there's no per-set tracking, so the single Log-this-set
+// link for this row can't tell straight sets from the AMRAP set apart. We
+// therefore never silently pre-fill a rep count for an AMRAP row: reps
+// travels as repsTarget (a placeholder hint only) instead of reps.
 function buildLogHref(
   exerciseId: string,
   primaryLift: string | undefined,
   reps: number,
+  isAmrap: boolean,
   resolvedWeight: number | null,
 ): string {
   const mainLift = primaryLift ? PRIMARY_LIFT_TO_MAIN_LIFT[primaryLift] : undefined;
@@ -32,7 +39,11 @@ function buildLogHref(
   } else {
     params.set("exerciseId", exerciseId);
   }
-  params.set("reps", String(reps));
+  if (isAmrap) {
+    params.set("repsTarget", String(reps));
+  } else {
+    params.set("reps", String(reps));
+  }
   if (resolvedWeight != null) {
     params.set("weight", String(resolvedWeight));
   }
@@ -138,17 +149,17 @@ export default async function TodaysSessionPage({
             {sessionExercises.map((pe) => {
               const exerciseName = exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise";
               const primaryLift = primaryLiftById.get(pe.exercise_id);
-              const repsDisplay = pe.is_amrap ? `${pe.reps}+` : `${pe.reps}`;
+              const setsRepsDisplay = formatSetsReps(pe.sets, pe.reps, pe.is_amrap);
 
               if (pe.percent_of_max == null) {
-                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, null);
+                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, pe.is_amrap, null);
                 return (
                   <li
                     key={pe.id}
                     className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                   >
                     <span>
-                      {exerciseName} — {pe.sets}×{repsDisplay}
+                      {exerciseName} — {setsRepsDisplay}
                     </span>
                     <Link href={logHref} className="text-sm text-orange-500 hover:underline">
                       Log this set
@@ -160,7 +171,7 @@ export default async function TodaysSessionPage({
               const trainingMaxKg = trainingMaxKgByExerciseId.get(pe.exercise_id);
 
               if (trainingMaxKg == null) {
-                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, null);
+                const logHref = buildLogHref(pe.exercise_id, primaryLift, pe.reps, pe.is_amrap, null);
                 return (
                   <li
                     key={pe.id}
@@ -168,7 +179,7 @@ export default async function TodaysSessionPage({
                   >
                     <div className="flex items-center justify-between">
                       <p className="text-white">
-                        {exerciseName} — {pe.sets}×{repsDisplay} @ {pe.percent_of_max}%
+                        {exerciseName} — {setsRepsDisplay} @ {pe.percent_of_max}%
                       </p>
                       <Link href={logHref} className="text-sm text-orange-500 hover:underline">
                         Log this set
@@ -192,6 +203,7 @@ export default async function TodaysSessionPage({
                 pe.exercise_id,
                 primaryLift,
                 pe.reps,
+                pe.is_amrap,
                 roundToLoadableIncrement(resolvedWeight, unit),
               );
 
@@ -201,7 +213,7 @@ export default async function TodaysSessionPage({
                   className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                 >
                   <span>
-                    {exerciseName} — {pe.sets}×{repsDisplay} @ {resolvedWeight}
+                    {exerciseName} — {setsRepsDisplay} @ {resolvedWeight}
                     {unit}{" "}
                     <span className="text-sm text-neutral-400">
                       ({pe.percent_of_max}% of {tmDisplay}

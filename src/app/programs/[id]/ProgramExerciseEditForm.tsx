@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { updateProgramExercise } from "../actions";
+import { formatSetsReps } from "@/lib/programs/setsReps";
 
 // Editing existing values only — no reordering/add/remove here, that stays
 // in ProgramExerciseForm (add) and the plain exercise list (no delete yet).
@@ -25,13 +26,13 @@ export function ProgramExerciseEditForm({
   action: typeof updateProgramExercise;
 }) {
   const [editing, setEditing] = useState(false);
-  const repsDisplay = isAmrap ? `${reps}+` : `${reps}`;
+  const setsRepsDisplay = formatSetsReps(sets, reps, isAmrap);
 
   if (!editing) {
     return (
       <li className="flex items-center justify-between text-sm text-neutral-300">
         <span>
-          {exerciseName} — {sets}×{repsDisplay}
+          {exerciseName} — {setsRepsDisplay}
           {percentOfMax != null && ` @ ${percentOfMax}%`}
         </span>
         <button

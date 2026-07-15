@@ -15,15 +15,20 @@ function isMainLift(value: string | null): value is MainLift {
 // Optional ?lift=&weight=&reps= URL params pre-fill the form on mount (e.g.
 // from Today's Session "Log this set"). Absent params fall back to the
 // original defaults, so plain navigation to /dashboard is unchanged.
+//
+// ?repsTarget= is a variant of ?reps= used for an AMRAP set: instead of
+// pre-filling a rep count that would be silently logged if untouched, the
+// reps field starts empty with a "target: N+" placeholder.
 export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet }) {
   const searchParams = useSearchParams();
   const prefillLift = searchParams.get("lift");
   const prefillWeight = searchParams.get("weight");
   const prefillReps = searchParams.get("reps");
+  const repsTarget = searchParams.get("repsTarget");
 
   const [weight, setWeight] = useState(prefillWeight ?? "135");
   const [lift, setLift] = useState<MainLift>(isMainLift(prefillLift) ? prefillLift : MAIN_LIFTS[0]);
-  const [reps, setReps] = useState(prefillReps ?? "1");
+  const [reps, setReps] = useState(prefillReps ?? (repsTarget ? "" : "1"));
   const [missed, setMissed] = useState(false);
   const numericWeight = parseFloat(weight) || 0;
   const weightStep = unit === "kg" ? 2.5 : 5;
@@ -91,6 +96,7 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
               required
               value={reps}
               onChange={(e) => setReps(e.target.value)}
+              placeholder={repsTarget ? `target: ${repsTarget}+` : undefined}
               className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
             />
           </div>
