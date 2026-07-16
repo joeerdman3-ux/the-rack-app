@@ -30,6 +30,27 @@ export async function createProgram(formData: FormData) {
   redirect(`/programs/${data.id}`);
 }
 
+// program_weeks/program_sessions/program_exercises/program_training_maxes all
+// reference programs(id) on delete cascade (0010_program_builder.sql,
+// 0011_program_training_maxes.sql), so deleting the program row alone is
+// enough to remove all of them. workouts/accessory_logs have no foreign key
+// to programs at all — lift is a free-text string on workouts, and
+// accessory_logs.exercise_id points at exercises, not program_exercises — so
+// logging history survives a program delete untouched, by construction.
+export async function deleteProgram(programId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  if (!programId) return;
+
+  await supabase.from("programs").delete().eq("id", programId).eq("user_id", user.id);
+
+  revalidatePath("/programs");
+}
+
 export async function updateProgramName(formData: FormData) {
   const supabase = await createClient();
   const {
@@ -290,7 +311,14 @@ export async function copyWeekToNewWeek(formData: FormData) {
 // set those themselves via the existing "Set Training Max" UI once they see
 // the new program. template_weeks.note/phase_name are carried over onto the
 // cloned program_weeks rows so a template's guidance text isn't lost.
-export async function applyTemplate(formData: FormData) {
+//
+// Returns instead of calling redirect(): this is invoked through a Server
+// Action passed as a prop into a Client Component (UseTemplateForm), and the
+// caller navigates client-side with router.push() once it has the new
+// program's id, rather than relying on redirect() to reach the browser.
+export async function applyTemplate(
+  formData: FormData,
+): Promise<{ success: true; programId: string } | { success: false }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -299,14 +327,14 @@ export async function applyTemplate(formData: FormData) {
 
   const templateId = formData.get("template_id") as string;
   const name = ((formData.get("name") as string) || "").trim();
-  if (!templateId || !name) return;
+  if (!templateId || !name) return { success: false };
 
   const { data: newProgram, error: programError } = await supabase
     .from("programs")
     .insert({ user_id: user.id, name })
     .select("id")
     .single();
-  if (programError || !newProgram) return;
+  if (programError || !newProgram) return { success: false };
 
   const { data: templateWeeks } = await supabase
     .from("template_weeks")
@@ -389,7 +417,7 @@ export async function applyTemplate(formData: FormData) {
   }
 
   revalidatePath("/programs");
-  redirect(`/programs/${newProgram.id}`);
+  return { success: true, programId: newProgram.id };
 }
 
 export async function setTrainingMax(formData: FormData) {

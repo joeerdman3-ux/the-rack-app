@@ -9,7 +9,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { applyTemplate } from "@/app/programs/actions";
 
-export async function applyTemplateChecked(formData: FormData) {
+export async function applyTemplateChecked(
+  formData: FormData,
+): Promise<{ success: true; programId: string } | { success: false }> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -17,14 +19,14 @@ export async function applyTemplateChecked(formData: FormData) {
   if (!user) redirect("/login");
 
   const templateId = formData.get("template_id") as string;
-  if (!templateId) return;
+  if (!templateId) return { success: false };
 
   const { data: template } = await supabase
     .from("program_templates")
     .select("id")
     .eq("id", templateId)
     .maybeSingle();
-  if (!template) return;
+  if (!template) return { success: false };
 
-  await applyTemplate(formData);
+  return applyTemplate(formData);
 }

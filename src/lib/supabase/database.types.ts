@@ -257,11 +257,13 @@ export type Database = {
           id: string;
           user_id: string;
           name: string;
+          created_at: string;
         };
         Insert: {
           id?: string;
           user_id: string;
           name: string;
+          created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["programs"]["Insert"]>;
         Relationships: [];
