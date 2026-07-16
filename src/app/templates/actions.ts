@@ -9,42 +9,24 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { applyTemplate } from "@/app/programs/actions";
 
-export async function applyTemplateChecked(formData: FormData) {
-  // TEMP DEBUG — remove once the "Create Program" no-op bug is diagnosed.
-  console.error("[applyTemplateChecked] invoked");
-
+export async function applyTemplateChecked(
+  formData: FormData,
+): Promise<{ success: true; programId: string } | { success: false }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    console.error("[applyTemplateChecked] EXIT: no authenticated user, redirecting to /login");
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
   const templateId = formData.get("template_id") as string;
-  console.error("[applyTemplateChecked] template_id =", templateId);
-  if (!templateId) {
-    console.error("[applyTemplateChecked] EXIT: missing template_id in formData");
-    return;
-  }
+  if (!templateId) return { success: false };
 
-  const { data: template, error: templateError } = await supabase
+  const { data: template } = await supabase
     .from("program_templates")
     .select("id")
     .eq("id", templateId)
     .maybeSingle();
-  console.error("[applyTemplateChecked] template lookup:", { template, templateError });
-  if (!template) {
-    console.error(
-      "[applyTemplateChecked] EXIT: template not found (bad id, or RLS blocked the read — see templateError above)",
-    );
-    return;
-  }
+  if (!template) return { success: false };
 
-  console.error("[applyTemplateChecked] template verified, delegating to applyTemplate");
-  await applyTemplate(formData);
-  console.error(
-    "[applyTemplateChecked] applyTemplate() returned without redirecting — it should have redirected on success",
-  );
+  return applyTemplate(formData);
 }

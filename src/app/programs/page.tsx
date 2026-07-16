@@ -14,7 +14,7 @@ export default async function ProgramsPage() {
     .from("programs")
     .select("id, name")
     .eq("user_id", user.id)
-    .order("name", { ascending: true });
+    .order("created_at", { ascending: false });
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
