@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { applyTemplateChecked } from "./actions";
+
+// Guarantees "Creating..." is visible for at least this long, even when the
+// round trip resolves almost instantly (e.g. on a fast connection) — without
+// this, a sub-frame pending state is functionally invisible, which is
+// exactly the ambiguity ("did my tap register?") this button exists to
+// prevent.
+const MIN_PENDING_MS = 400;
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
 
 export function UseTemplateForm({
   templateId,
@@ -15,7 +26,7 @@ export function UseTemplateForm({
 }) {
   const router = useRouter();
   const [using, setUsing] = useState(false);
-  const [creating, setCreating] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   if (!using) {
     return (
@@ -31,14 +42,13 @@ export function UseTemplateForm({
 
   return (
     <form
-      action={async (formData) => {
-        setCreating(true);
-        const result = await action(formData);
-        if (result.success) {
-          router.push(`/programs/${result.programId}`);
-        } else {
-          setCreating(false);
-        }
+      action={(formData: FormData) => {
+        startTransition(async () => {
+          const [result] = await Promise.all([action(formData), wait(MIN_PENDING_MS)]);
+          if (result.success) {
+            router.push(`/programs/${result.programId}`);
+          }
+        });
       }}
       className="flex items-center gap-2"
     >
@@ -52,15 +62,15 @@ export function UseTemplateForm({
       />
       <button
         type="submit"
-        disabled={creating}
+        disabled={isPending}
         className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
       >
-        {creating ? "Creating..." : "Create Program"}
+        {isPending ? "Creating..." : "Create Program"}
       </button>
       <button
         type="button"
         onClick={() => setUsing(false)}
-        disabled={creating}
+        disabled={isPending}
         className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-60"
       >
         Cancel
