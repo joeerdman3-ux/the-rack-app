@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { createProgram } from "./actions";
+import { createProgram, deleteProgram } from "./actions";
+import { DeleteProgramButton } from "./DeleteProgramButton";
 
 export default async function ProgramsPage() {
   const supabase = await createClient();
@@ -46,13 +47,17 @@ export default async function ProgramsPage() {
         ) : (
           <ul className="space-y-2">
             {programs.map((program) => (
-              <li key={program.id}>
+              <li
+                key={program.id}
+                className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+              >
                 <Link
                   href={`/programs/${program.id}`}
-                  className="block rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3 text-white hover:border-orange-500"
+                  className="flex-1 text-white hover:text-orange-500 hover:underline"
                 >
                   {program.name}
                 </Link>
+                <DeleteProgramButton programId={program.id} action={deleteProgram} />
               </li>
             ))}
           </ul>

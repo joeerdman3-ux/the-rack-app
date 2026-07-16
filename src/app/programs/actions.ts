@@ -30,6 +30,27 @@ export async function createProgram(formData: FormData) {
   redirect(`/programs/${data.id}`);
 }
 
+// program_weeks/program_sessions/program_exercises/program_training_maxes all
+// reference programs(id) on delete cascade (0010_program_builder.sql,
+// 0011_program_training_maxes.sql), so deleting the program row alone is
+// enough to remove all of them. workouts/accessory_logs have no foreign key
+// to programs at all — lift is a free-text string on workouts, and
+// accessory_logs.exercise_id points at exercises, not program_exercises — so
+// logging history survives a program delete untouched, by construction.
+export async function deleteProgram(programId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  if (!programId) return;
+
+  await supabase.from("programs").delete().eq("id", programId).eq("user_id", user.id);
+
+  revalidatePath("/programs");
+}
+
 export async function updateProgramName(formData: FormData) {
   const supabase = await createClient();
   const {
