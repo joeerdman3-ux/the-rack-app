@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateProfile } from "./actions";
+import { updateProfile, joinPremiumWaitlist } from "./actions";
+import { PremiumWaitlistCard } from "./PremiumWaitlistCard";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -15,6 +16,13 @@ export default async function SettingsPage() {
     .select("*")
     .eq("id", user.id)
     .single();
+
+  const { data: waitlistEntry } = await supabase
+    .from("premium_waitlist")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const alreadyOnWaitlist = waitlistEntry != null;
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
@@ -123,6 +131,10 @@ export default async function SettingsPage() {
             Save
           </button>
         </form>
+
+        <div className="mt-8">
+          <PremiumWaitlistCard alreadyJoined={alreadyOnWaitlist} action={joinPremiumWaitlist} />
+        </div>
 
         <div className="mt-8 border-t border-neutral-800 pt-4">
           <Link href="/privacy" className="text-sm text-orange-500 hover:underline">

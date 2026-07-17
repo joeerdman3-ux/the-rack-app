@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 export async function updateProfile(formData: FormData) {
@@ -30,4 +31,24 @@ export async function updateProfile(formData: FormData) {
     .eq("id", user.id);
 
   redirect("/dashboard");
+}
+
+// unique(user_id) on premium_waitlist means a repeat call is a conflict
+// (Postgres 23505), not a duplicate row — treated as success either way,
+// since the user ends up on the list regardless.
+export async function joinPremiumWaitlist(): Promise<{ success: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { success: false };
+
+  const { error } = await supabase.from("premium_waitlist").insert({ user_id: user.id });
+  if (error && error.code !== "23505") {
+    console.error("[joinPremiumWaitlist] insert failed:", error);
+    return { success: false };
+  }
+
+  revalidatePath("/settings");
+  return { success: true };
 }
