@@ -64,6 +64,9 @@ export async function logSet(formData: FormData): Promise<
   if (error || !newWorkout) return { success: false };
 
   const isNewPR = !missed && (priorBestE1rm === null || e1rm > priorBestE1rm);
+  // TEMP DEBUG — remove once the "no New PR banner despite a genuine PR" bug
+  // is diagnosed.
+  console.error("[logSet] PR check:", { lift, missed, priorBestE1rm, e1rm, isNewPR });
   if (isNewPR) {
     const { error: prError } = await supabase.from("personal_records").insert({
       user_id: user.id,
