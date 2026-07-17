@@ -307,7 +307,7 @@ export default async function DashboardPage() {
         {!alreadyOnWaitlist && (
           <Link
             href="/settings"
-            className="mb-6 block text-sm text-neutral-500 hover:text-neutral-400"
+            className="mb-6 block text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-2 hover:text-neutral-300 hover:decoration-neutral-500 active:text-neutral-200"
           >
             Premium is coming — see what&apos;s included →
           </Link>
