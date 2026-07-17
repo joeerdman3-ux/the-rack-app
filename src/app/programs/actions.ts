@@ -415,7 +415,12 @@ export async function applyTemplate(
     .filter((te): te is NonNullable<typeof te> => te !== null);
 
   if (newTemplateExercises.length > 0) {
-    await supabase.from("program_exercises").insert(newTemplateExercises);
+    const { error: exercisesInsertError } = await supabase
+      .from("program_exercises")
+      .insert(newTemplateExercises);
+    if (exercisesInsertError) {
+      console.error("[applyTemplate] program_exercises insert failed:", exercisesInsertError);
+    }
   }
 
   revalidatePath("/programs");
