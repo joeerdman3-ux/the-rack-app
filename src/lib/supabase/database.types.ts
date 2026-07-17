@@ -120,6 +120,20 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["personal_records"]["Insert"]>;
         Relationships: [];
       };
+      premium_waitlist: {
+        Row: {
+          id: string;
+          user_id: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["premium_waitlist"]["Insert"]>;
+        Relationships: [];
+      };
       pr_shares: {
         Row: {
           id: string;
