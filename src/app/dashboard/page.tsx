@@ -43,6 +43,15 @@ export default async function DashboardPage() {
     .eq("id", user.id)
     .single();
 
+  // Teaser banner is hidden once the user's already on the waitlist — no
+  // reason to keep advertising something they've already signed up for.
+  const { data: waitlistEntry } = await supabase
+    .from("premium_waitlist")
+    .select("id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  const alreadyOnWaitlist = waitlistEntry != null;
+
   const unit = profile?.unit ?? "lb";
   const today = new Date().toISOString().slice(0, 10);
 
@@ -294,6 +303,15 @@ export default async function DashboardPage() {
             </form>
           </div>
         </div>
+
+        {!alreadyOnWaitlist && (
+          <Link
+            href="/settings"
+            className="mb-6 block text-sm text-neutral-500 hover:text-neutral-400"
+          >
+            Premium is coming — see what&apos;s included →
+          </Link>
+        )}
 
         <LoggingSection
           unit={unit}
