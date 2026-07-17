@@ -45,18 +45,34 @@ export interface MissedSet {
   sticking_point: string | null;
 }
 
+// Below this many missed-and-tagged sets for a lift, the most-common
+// sticking point is too noisy to act on — a single bad rep shouldn't drive
+// a full accessory-work recommendation.
+export const MIN_MISSED_SETS_FOR_DIAGNOSIS = 3;
+
 export interface StickingPointDiagnosis {
+  status: "ready";
   lift: MainLift;
   stickingPoint: StickingPoint;
   label: string;
   prescriptions: ExercisePrescription[];
 }
 
+export interface PendingStickingPointDiagnosis {
+  status: "pending";
+  lift: MainLift;
+  currentCount: number;
+  remainingCount: number;
+  threshold: number;
+}
+
+export type StickingPointDiagnosisResult = StickingPointDiagnosis | PendingStickingPointDiagnosis;
+
 export interface Diagnosis {
   standings: LiftStanding[];
   weakestLifts: MainLift[];
   laggingRatios: LaggingRatio[];
-  stickingPointDiagnoses: StickingPointDiagnosis[];
+  stickingPointDiagnoses: StickingPointDiagnosisResult[];
 }
 
 export function diagnose(
@@ -107,24 +123,40 @@ export function diagnose(
   }
 
   // For every lift tied for lowest tier, find its most commonly reported
-  // sticking point (from missed sets where one was logged). No fabricated
-  // default — a lift with nothing ever reported for it is simply omitted
-  // from the array rather than guessing. Iterating all of weakestLifts
-  // (not just weakestLifts[0]) ensures a tie doesn't silently drop lifts
-  // ordered later in MAIN_LIFTS (e.g. Overhead Press) from ever getting a
-  // diagnosis when they tie with an earlier lift.
+  // sticking point (from missed sets where one was logged). Below
+  // MIN_MISSED_SETS_FOR_DIAGNOSIS total tagged misses for that lift, a
+  // "pending" entry is returned instead of a prescription — a single bad
+  // rep shouldn't drive a full recommendation, but the UI still needs to
+  // tell the user how many more they need rather than showing nothing.
+  // Iterating all of weakestLifts (not just weakestLifts[0]) ensures a tie
+  // doesn't silently drop lifts ordered later in MAIN_LIFTS (e.g. Overhead
+  // Press) from ever getting a diagnosis when they tie with an earlier lift.
   //
   // prescriptions is intentionally left empty here: this function stays
   // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
-  // for querying sticking_point_prescriptions + exercises for each of these
-  // stickingPoints and filling the arrays in before rendering.
-  const stickingPointDiagnoses: StickingPointDiagnosis[] = [];
+  // for querying sticking_point_prescriptions + exercises for each "ready"
+  // stickingPoint and filling the arrays in before rendering.
+  const stickingPointDiagnoses: StickingPointDiagnosisResult[] = [];
   for (const lift of weakestLifts) {
     const counts = new Map<string, number>();
+    let taggedMisses = 0;
     for (const set of missedSets) {
       if (set.lift !== lift || !set.sticking_point) continue;
+      taggedMisses++;
       counts.set(set.sticking_point, (counts.get(set.sticking_point) ?? 0) + 1);
     }
+
+    if (taggedMisses < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
+      stickingPointDiagnoses.push({
+        status: "pending",
+        lift,
+        currentCount: taggedMisses,
+        remainingCount: MIN_MISSED_SETS_FOR_DIAGNOSIS - taggedMisses,
+        threshold: MIN_MISSED_SETS_FOR_DIAGNOSIS,
+      });
+      continue;
+    }
+
     let topPoint: string | null = null;
     let topCount = 0;
     for (const [point, count] of counts) {
@@ -136,6 +168,7 @@ export function diagnose(
     if (topPoint) {
       const stickingPoint = topPoint as StickingPoint;
       stickingPointDiagnoses.push({
+        status: "ready",
         lift,
         stickingPoint,
         label: STICKING_POINT_LABELS[stickingPoint],
