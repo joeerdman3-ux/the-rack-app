@@ -36,7 +36,6 @@ export function WorkoutEntryForm({
           </label>
           <input
             id="exerciseName"
-            name="exerciseName"
             type="text"
             required
             value={exerciseName}
@@ -52,7 +51,6 @@ export function WorkoutEntryForm({
             </label>
             <input
               id="weight"
-              name="weight"
               type="number"
               inputMode="decimal"
               step={weightStep}
@@ -70,7 +68,6 @@ export function WorkoutEntryForm({
             </label>
             <input
               id="reps"
-              name="reps"
               type="number"
               inputMode="numeric"
               step={1}
@@ -88,7 +85,6 @@ export function WorkoutEntryForm({
             </label>
             <input
               id="sets"
-              name="sets"
               type="number"
               inputMode="numeric"
               step={1}
