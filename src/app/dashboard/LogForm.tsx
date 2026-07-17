@@ -30,6 +30,7 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
   const [lift, setLift] = useState<MainLift>(isMainLift(prefillLift) ? prefillLift : MAIN_LIFTS[0]);
   const [reps, setReps] = useState(prefillReps ?? (repsTarget ? "" : "1"));
   const [missed, setMissed] = useState(false);
+  const [newPR, setNewPR] = useState<{ lift: string; e1rm: number } | null>(null);
   const numericWeight = parseFloat(weight) || 0;
   const weightStep = unit === "kg" ? 2.5 : 5;
 
@@ -37,9 +38,17 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
     <div className="space-y-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
       <BarbellVisualizer weight={numericWeight} unit={unit} />
 
+      {newPR && (
+        <div className="rounded-md border border-orange-500 bg-orange-950 px-4 py-3 text-sm font-semibold text-orange-200">
+          New PR! {newPR.lift} — {newPR.e1rm}
+          {unit} e1RM
+        </div>
+      )}
+
       <form
         action={async (formData) => {
-          await action(formData);
+          const result = await action(formData);
+          setNewPR(result.success && result.isNewPR ? { lift: result.lift, e1rm: result.e1rm } : null);
         }}
         className="space-y-4"
       >
