@@ -6,7 +6,12 @@ import { logSet, deleteSet } from "./actions";
 import { logAccessorySet, deleteAccessoryLog } from "./accessoryActions";
 import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
-import { diagnose, type Bests, type StickingPointDiagnosis } from "@/lib/standards/diagnosis";
+import {
+  diagnose,
+  type Bests,
+  type StickingPointDiagnosis,
+  type TiedStickingPointDiagnosis,
+} from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 import {
   computeAgeBucket,
@@ -122,14 +127,19 @@ export default async function DashboardPage() {
 
   // diagnose() determines *which* sticking points (if any, one per lift
   // tied for lowest tier that's cleared the minimum-sample-size threshold)
-  // but stays DB-free; fetch prescriptions for the "ready" ones here in one
-  // batch and merge them in before rendering. "pending" entries (below
-  // threshold) have no stickingPoint/prescriptions to look up.
-  const readyDiagnoses = diagnosis.stickingPointDiagnoses.filter(
-    (d): d is StickingPointDiagnosis => d.status === "ready",
+  // but stays DB-free; fetch prescriptions for the "ready"/"tied" ones here
+  // in one batch and merge them in before rendering. "pending" entries
+  // (below threshold) have no stickingPoint(s)/prescriptions to look up.
+  const needsPrescriptions = diagnosis.stickingPointDiagnoses.filter(
+    (d): d is StickingPointDiagnosis | TiedStickingPointDiagnosis =>
+      d.status === "ready" || d.status === "tied",
   );
-  if (readyDiagnoses.length > 0) {
-    const stickingPoints = readyDiagnoses.map((d) => d.stickingPoint);
+  if (needsPrescriptions.length > 0) {
+    const stickingPoints = [
+      ...new Set(
+        needsPrescriptions.flatMap((d) => (d.status === "ready" ? [d.stickingPoint] : d.stickingPoints)),
+      ),
+    ];
 
     const { data: prescriptionRows } = await supabase
       .from("sticking_point_prescriptions")
@@ -151,11 +161,17 @@ export default async function DashboardPage() {
       rowsByStickingPoint.set(row.sticking_point, list);
     }
 
-    for (const d of readyDiagnoses) {
-      d.prescriptions = mapPrescriptionRows(
-        rowsByStickingPoint.get(d.stickingPoint) ?? [],
-        exerciseRows ?? [],
-      );
+    for (const d of needsPrescriptions) {
+      if (d.status === "ready") {
+        d.prescriptions = mapPrescriptionRows(
+          rowsByStickingPoint.get(d.stickingPoint) ?? [],
+          exerciseRows ?? [],
+        );
+      } else {
+        d.prescriptions = d.stickingPoints.flatMap((sp) =>
+          mapPrescriptionRows(rowsByStickingPoint.get(sp) ?? [], exerciseRows ?? []),
+        );
+      }
     }
   }
 

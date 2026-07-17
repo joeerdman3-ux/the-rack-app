@@ -56,6 +56,20 @@ export interface StickingPointDiagnosis {
   stickingPoint: StickingPoint;
   label: string;
   prescriptions: ExercisePrescription[];
+  count: number;
+  totalTaggedMisses: number;
+}
+
+// Two or more sticking points tied for most-frequent — arbitrarily picking
+// one would misrepresent the signal, so this carries all of them instead.
+export interface TiedStickingPointDiagnosis {
+  status: "tied";
+  lift: MainLift;
+  stickingPoints: StickingPoint[];
+  labels: string[];
+  prescriptions: ExercisePrescription[];
+  count: number;
+  totalTaggedMisses: number;
 }
 
 export interface PendingStickingPointDiagnosis {
@@ -66,7 +80,10 @@ export interface PendingStickingPointDiagnosis {
   threshold: number;
 }
 
-export type StickingPointDiagnosisResult = StickingPointDiagnosis | PendingStickingPointDiagnosis;
+export type StickingPointDiagnosisResult =
+  | StickingPointDiagnosis
+  | TiedStickingPointDiagnosis
+  | PendingStickingPointDiagnosis;
 
 export interface Diagnosis {
   standings: LiftStanding[];
@@ -132,10 +149,14 @@ export function diagnose(
   // doesn't silently drop lifts ordered later in MAIN_LIFTS (e.g. Overhead
   // Press) from ever getting a diagnosis when they tie with an earlier lift.
   //
+  // If multiple sticking points tie for most-frequent, a "tied" entry
+  // carries all of them rather than arbitrarily picking one — the signal
+  // genuinely doesn't point at a single weak spot.
+  //
   // prescriptions is intentionally left empty here: this function stays
   // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
-  // for querying sticking_point_prescriptions + exercises for each "ready"
-  // stickingPoint and filling the arrays in before rendering.
+  // for querying sticking_point_prescriptions + exercises for each "ready"/
+  // "tied" stickingPoint and filling the arrays in before rendering.
   const stickingPointDiagnoses: StickingPointDiagnosisResult[] = [];
   for (const lift of weakestLifts) {
     const counts = new Map<string, number>();
@@ -157,22 +178,36 @@ export function diagnose(
       continue;
     }
 
-    let topPoint: string | null = null;
+    // taggedMisses >= MIN_MISSED_SETS_FOR_DIAGNOSIS (> 0) guarantees counts
+    // is non-empty, so topPoints always has at least one entry here.
     let topCount = 0;
-    for (const [point, count] of counts) {
-      if (count > topCount) {
-        topPoint = point;
-        topCount = count;
-      }
+    for (const count of counts.values()) {
+      if (count > topCount) topCount = count;
     }
-    if (topPoint) {
-      const stickingPoint = topPoint as StickingPoint;
+    const topPoints = [...counts.entries()]
+      .filter(([, count]) => count === topCount)
+      .map(([point]) => point as StickingPoint);
+
+    if (topPoints.length > 1) {
+      stickingPointDiagnoses.push({
+        status: "tied",
+        lift,
+        stickingPoints: topPoints,
+        labels: topPoints.map((sp) => STICKING_POINT_LABELS[sp]),
+        prescriptions: [],
+        count: topCount,
+        totalTaggedMisses: taggedMisses,
+      });
+    } else {
+      const stickingPoint = topPoints[0];
       stickingPointDiagnoses.push({
         status: "ready",
         lift,
         stickingPoint,
         label: STICKING_POINT_LABELS[stickingPoint],
         prescriptions: [],
+        count: topCount,
+        totalTaggedMisses: taggedMisses,
       });
     }
   }

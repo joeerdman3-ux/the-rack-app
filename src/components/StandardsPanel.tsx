@@ -26,6 +26,11 @@ function formatPercentileText(estimate: string): string {
   return `beats ~${estimate}% of lifters in your class`;
 }
 
+function joinLabels(labels: string[]): string {
+  if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
+  return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
 export function StandardsPanel({
   diagnosis,
   unit,
@@ -133,23 +138,53 @@ export function StandardsPanel({
         )}
       </div>
 
-      {diagnosis.stickingPointDiagnoses.map((d) =>
-        d.status === "pending" ? (
-          <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
-            <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
-            <p className="text-sm text-neutral-400">
-              Log {d.remainingCount} more missed {d.lift} set{d.remainingCount === 1 ? "" : "s"}{" "}
-              with a sticking point tagged to unlock your diagnosis ({d.currentCount}/{d.threshold}
-              ).
-            </p>
-          </div>
-        ) : (
+      {diagnosis.stickingPointDiagnoses.map((d) => {
+        if (d.status === "pending") {
+          return (
+            <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+              <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+              <p className="text-sm text-neutral-400">
+                Log {d.remainingCount} more missed {d.lift} set{d.remainingCount === 1 ? "" : "s"}{" "}
+                with a sticking point tagged to unlock your diagnosis ({d.currentCount}/{d.threshold}
+                ).
+              </p>
+            </div>
+          );
+        }
+
+        const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
+
+        if (d.status === "tied") {
+          return (
+            <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+              <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+              <p className="mb-4 text-sm text-neutral-400">
+                Your {d.lift} misses are split evenly between {joinLabels(d.labels)}
+                {isLowConfidence(d.lift) && " (based on limited data)"} — consider prescriptions for
+                both ({d.count} of {d.totalTaggedMisses} missed sets each, {percent}%).
+              </p>
+              <ul className="space-y-3">
+                {d.prescriptions.map((p, i) => (
+                  <li key={`${p.exercise}-${i}`} className="text-sm">
+                    <p className="font-medium text-white">
+                      {p.exercise} <span className="font-normal text-neutral-500">— {p.setsReps}</span>
+                    </p>
+                    <p className="text-neutral-400">{p.rationale}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          );
+        }
+
+        return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
             <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
             <p className="mb-4 text-sm text-neutral-400">
               Most-reported sticking point on {d.lift}
               {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
-              <span className="text-neutral-300">{d.label}</span>
+              <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
+              {" "}missed sets, {percent}%)
             </p>
             <ul className="space-y-3">
               {d.prescriptions.map((p) => (
@@ -162,8 +197,8 @@ export function StandardsPanel({
               ))}
             </ul>
           </div>
-        ),
-      )}
+        );
+      })}
     </section>
   );
 }
