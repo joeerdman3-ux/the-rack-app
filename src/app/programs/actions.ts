@@ -309,8 +309,9 @@ export async function copyWeekToNewWeek(formData: FormData) {
 // exercises). Deliberately does not set any program_training_maxes: a
 // template has no idea what the person's actual current maxes are, so they
 // set those themselves via the existing "Set Training Max" UI once they see
-// the new program. template_weeks.note/phase_name are carried over onto the
-// cloned program_weeks rows so a template's guidance text isn't lost.
+// the new program. template_weeks.note/phase_name and template_exercises.note
+// are carried over onto the cloned program_weeks/program_exercises rows so a
+// template's guidance text isn't lost.
 //
 // Returns instead of calling redirect(): this is invoked through a Server
 // Action passed as a prop into a Client Component (UseTemplateForm), and the
@@ -391,7 +392,7 @@ export async function applyTemplate(
       ? await supabase
           .from("template_exercises")
           .select(
-            "template_session_id, exercise_id, sets, reps, percent_of_max, is_amrap, sort_order",
+            "template_session_id, exercise_id, sets, reps, percent_of_max, is_amrap, sort_order, note",
           )
           .in("template_session_id", templateSessionIds)
       : { data: [] };
@@ -408,6 +409,7 @@ export async function applyTemplate(
         percent_of_max: te.percent_of_max,
         is_amrap: te.is_amrap,
         sort_order: te.sort_order,
+        note: te.note,
       };
     })
     .filter((te): te is NonNullable<typeof te> => te !== null);
