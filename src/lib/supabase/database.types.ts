@@ -96,6 +96,30 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["workouts"]["Insert"]>;
         Relationships: [];
       };
+      personal_records: {
+        Row: {
+          id: string;
+          user_id: string;
+          lift: string;
+          e1rm: number;
+          weight: number;
+          reps: number;
+          workout_id: string | null;
+          achieved_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          lift: string;
+          e1rm: number;
+          weight: number;
+          reps: number;
+          workout_id?: string | null;
+          achieved_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["personal_records"]["Insert"]>;
+        Relationships: [];
+      };
       pr_shares: {
         Row: {
           id: string;
