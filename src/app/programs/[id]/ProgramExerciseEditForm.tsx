@@ -16,6 +16,7 @@ export function ProgramExerciseEditForm({
   reps,
   percentOfMax,
   isAmrap,
+  note,
   action,
   swapAction,
 }: {
@@ -27,6 +28,7 @@ export function ProgramExerciseEditForm({
   reps: number;
   percentOfMax: number | null;
   isAmrap: boolean;
+  note: string | null;
   action: typeof updateProgramExercise;
   swapAction: typeof swapProgramExercise;
 }) {
@@ -36,18 +38,21 @@ export function ProgramExerciseEditForm({
 
   if (!editing) {
     return (
-      <li className="flex items-center justify-between text-sm text-neutral-300">
-        <span>
-          {exerciseName} — {setsRepsDisplay}
-          {percentOfMax != null && ` @ ${percentOfMax}%`}
-        </span>
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          className="text-xs text-orange-500 hover:underline"
-        >
-          Edit
-        </button>
+      <li className="text-sm text-neutral-300">
+        <div className="flex items-center justify-between">
+          <span>
+            {exerciseName} — {setsRepsDisplay}
+            {percentOfMax != null && ` @ ${percentOfMax}%`}
+          </span>
+          <button
+            type="button"
+            onClick={() => setEditing(true)}
+            className="text-xs text-orange-500 hover:underline"
+          >
+            Edit
+          </button>
+        </div>
+        {note && <p className="mt-0.5 text-xs italic text-neutral-500">{note}</p>}
       </li>
     );
   }

@@ -14,6 +14,7 @@ interface ProgramExerciseRow {
   percent_of_max: number | null;
   sort_order: number;
   is_amrap: boolean;
+  note: string | null;
 }
 
 // Routes by exercises.primary_lift, not by where the exercise sits in the
@@ -95,7 +96,7 @@ export default async function TodaysSessionPage({
 
   const { data: exercisesData } = await supabase
     .from("program_exercises")
-    .select("id, exercise_id, sets, reps, percent_of_max, sort_order, is_amrap")
+    .select("id, exercise_id, sets, reps, percent_of_max, sort_order, is_amrap, note")
     .eq("program_session_id", session.id)
     .order("sort_order", { ascending: true });
   const sessionExercises: ProgramExerciseRow[] = exercisesData ?? [];
@@ -156,14 +157,17 @@ export default async function TodaysSessionPage({
                 return (
                   <li
                     key={pe.id}
-                    className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
+                    className="rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                   >
-                    <span>
-                      {exerciseName} — {setsRepsDisplay}
-                    </span>
-                    <Link href={logHref} className="text-sm text-orange-500 hover:underline">
-                      Log this set
-                    </Link>
+                    <div className="flex items-center justify-between">
+                      <span>
+                        {exerciseName} — {setsRepsDisplay}
+                      </span>
+                      <Link href={logHref} className="text-sm text-orange-500 hover:underline">
+                        Log this set
+                      </Link>
+                    </div>
+                    {pe.note && <p className="mt-1 text-xs italic text-neutral-500">{pe.note}</p>}
                   </li>
                 );
               }
@@ -192,6 +196,7 @@ export default async function TodaysSessionPage({
                       </Link>
                       .
                     </p>
+                    {pe.note && <p className="mt-1 text-xs italic text-neutral-500">{pe.note}</p>}
                   </li>
                 );
               }
@@ -210,19 +215,22 @@ export default async function TodaysSessionPage({
               return (
                 <li
                   key={pe.id}
-                  className="flex items-center justify-between rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
+                  className="rounded-md border border-neutral-800 bg-neutral-900 p-4 text-white"
                 >
-                  <span>
-                    {exerciseName} — {setsRepsDisplay} @ {resolvedWeight}
-                    {unit}{" "}
-                    <span className="text-sm text-neutral-400">
-                      ({pe.percent_of_max}% of {tmDisplay}
-                      {unit} TM)
+                  <div className="flex items-center justify-between">
+                    <span>
+                      {exerciseName} — {setsRepsDisplay} @ {resolvedWeight}
+                      {unit}{" "}
+                      <span className="text-sm text-neutral-400">
+                        ({pe.percent_of_max}% of {tmDisplay}
+                        {unit} TM)
+                      </span>
                     </span>
-                  </span>
-                  <Link href={logHref} className="text-sm text-orange-500 hover:underline">
-                    Log this set
-                  </Link>
+                    <Link href={logHref} className="text-sm text-orange-500 hover:underline">
+                      Log this set
+                    </Link>
+                  </div>
+                  {pe.note && <p className="mt-1 text-xs italic text-neutral-500">{pe.note}</p>}
                 </li>
               );
             })}
