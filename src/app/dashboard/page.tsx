@@ -6,7 +6,7 @@ import { logSet, deleteSet } from "./actions";
 import { logAccessorySet, deleteAccessoryLog } from "./accessoryActions";
 import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
-import { diagnose, type Bests } from "@/lib/standards/diagnosis";
+import { diagnose, type Bests, type StickingPointDiagnosis } from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 import {
   computeAgeBucket,
@@ -121,10 +121,15 @@ export default async function DashboardPage() {
   const hasProfile = Boolean(gender && bodyweight && birthdate);
 
   // diagnose() determines *which* sticking points (if any, one per lift
-  // tied for lowest tier) but stays DB-free; fetch prescriptions for all of
-  // them here in one batch and merge them in before rendering.
-  if (diagnosis.stickingPointDiagnoses.length > 0) {
-    const stickingPoints = diagnosis.stickingPointDiagnoses.map((d) => d.stickingPoint);
+  // tied for lowest tier that's cleared the minimum-sample-size threshold)
+  // but stays DB-free; fetch prescriptions for the "ready" ones here in one
+  // batch and merge them in before rendering. "pending" entries (below
+  // threshold) have no stickingPoint/prescriptions to look up.
+  const readyDiagnoses = diagnosis.stickingPointDiagnoses.filter(
+    (d): d is StickingPointDiagnosis => d.status === "ready",
+  );
+  if (readyDiagnoses.length > 0) {
+    const stickingPoints = readyDiagnoses.map((d) => d.stickingPoint);
 
     const { data: prescriptionRows } = await supabase
       .from("sticking_point_prescriptions")
@@ -146,7 +151,7 @@ export default async function DashboardPage() {
       rowsByStickingPoint.set(row.sticking_point, list);
     }
 
-    for (const d of diagnosis.stickingPointDiagnoses) {
+    for (const d of readyDiagnoses) {
       d.prescriptions = mapPrescriptionRows(
         rowsByStickingPoint.get(d.stickingPoint) ?? [],
         exerciseRows ?? [],
