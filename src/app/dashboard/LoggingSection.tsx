@@ -4,26 +4,28 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { LogForm } from "./LogForm";
 import { AccessoryLogForm, type AccessoryExerciseOption } from "./AccessoryLogForm";
-import { WorkoutEntryForm } from "./WorkoutEntryForm";
+import { LogSetsForm } from "./LogSetsForm";
 import type { Unit } from "@/lib/lifting/plates";
 import type { logSet } from "./actions";
-import type { logAccessorySet } from "./accessoryActions";
+import type { logAccessorySet, createExercise } from "./accessoryActions";
 
 export function LoggingSection({
   unit,
   exercises,
   logSetAction,
   logAccessoryAction,
+  createExerciseAction,
 }: {
   unit: Unit;
   exercises: AccessoryExerciseOption[];
   logSetAction: typeof logSet;
   logAccessoryAction: typeof logAccessorySet;
+  createExerciseAction: typeof createExercise;
 }) {
   // A "Log this set" link from Today's Session carries ?exerciseId= for
   // accessory-routed exercises — open straight into the Accessory tab.
   const searchParams = useSearchParams();
-  const [mode, setMode] = useState<"main" | "accessory" | "quick">(
+  const [mode, setMode] = useState<"main" | "accessory" | "logSets">(
     searchParams.get("exerciseId") ? "accessory" : "main",
   );
 
@@ -46,10 +48,10 @@ export function LoggingSection({
         </button>
         <button
           type="button"
-          onClick={() => setMode("quick")}
-          className={`rounded-r-md px-3 py-1.5 ${mode === "quick" ? "bg-orange-600 text-white" : "text-neutral-400 hover:bg-neutral-800"}`}
+          onClick={() => setMode("logSets")}
+          className={`rounded-r-md px-3 py-1.5 ${mode === "logSets" ? "bg-orange-600 text-white" : "text-neutral-400 hover:bg-neutral-800"}`}
         >
-          Quick Log
+          Log Sets
         </button>
       </div>
 
@@ -58,7 +60,12 @@ export function LoggingSection({
       ) : mode === "accessory" ? (
         <AccessoryLogForm unit={unit} exercises={exercises} action={logAccessoryAction} />
       ) : (
-        <WorkoutEntryForm unit={unit} />
+        <LogSetsForm
+          unit={unit}
+          exercises={exercises}
+          action={logAccessoryAction}
+          createExerciseAction={createExerciseAction}
+        />
       )}
     </div>
   );
