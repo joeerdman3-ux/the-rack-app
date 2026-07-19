@@ -1,11 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { formatMuscleGroups, type ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
 
 export interface ExercisePickerOption {
   id: string;
   name: string;
-  muscle_group: string | null;
+  muscle_groups: ExerciseMuscleGroup[];
   equipment: string | null;
 }
 
@@ -43,21 +44,24 @@ export function ExerciseSearchPicker({
         {filtered.length === 0 ? (
           <p className="px-1 py-2 text-sm text-neutral-500">No exercises match.</p>
         ) : (
-          filtered.map((exercise) => (
-            <button
-              key={exercise.id}
-              type="button"
-              onClick={() => onSelect(exercise)}
-              className="block w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-left text-sm hover:border-orange-500"
-            >
-              <span className="text-white">{exercise.name}</span>
-              {(exercise.muscle_group || exercise.equipment) && (
-                <span className="ml-2 text-xs text-neutral-500">
-                  {[exercise.muscle_group, exercise.equipment].filter(Boolean).join(" · ")}
-                </span>
-              )}
-            </button>
-          ))
+          filtered.map((exercise) => {
+            const muscleGroupText = formatMuscleGroups(exercise.muscle_groups);
+            return (
+              <button
+                key={exercise.id}
+                type="button"
+                onClick={() => onSelect(exercise)}
+                className="block w-full rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-left text-sm hover:border-orange-500"
+              >
+                <span className="text-white">{exercise.name}</span>
+                {(muscleGroupText || exercise.equipment) && (
+                  <span className="ml-2 text-xs text-neutral-500">
+                    {[muscleGroupText, exercise.equipment].filter(Boolean).join(" · ")}
+                  </span>
+                )}
+              </button>
+            );
+          })
         )}
       </div>
     </div>

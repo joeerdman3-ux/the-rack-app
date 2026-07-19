@@ -1,6 +1,11 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import {
+  MUSCLE_GROUP_LABELS,
+  formatMuscleGroups,
+  type ExerciseMuscleGroup,
+} from "@/lib/lifting/muscleGroups";
 
 export interface Exercise {
   id: string;
@@ -9,7 +14,7 @@ export interface Exercise {
   movement_pattern: string | null;
   equipment: string | null;
   description: string | null;
-  muscle_group: string | null;
+  muscle_groups: ExerciseMuscleGroup[];
   difficulty: string | null;
 }
 
@@ -51,9 +56,13 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
   const [equipment, setEquipment] = useState("all");
   const [difficulty, setDifficulty] = useState("all");
 
+  // Data-derived (not the full canonical list) so the filter only offers
+  // groups that actually match something currently loaded — unlike the
+  // create-exercise picker in LogSetsForm, which needs every canonical
+  // option regardless of what's in use yet.
   const muscleGroups = useMemo(
     () =>
-      [...new Set(exercises.map((e) => e.muscle_group).filter((v): v is string => Boolean(v)))].sort(),
+      [...new Set(exercises.flatMap((e) => e.muscle_groups.map((mg) => mg.muscle_group)))].sort(),
     [exercises],
   );
   const equipmentOptions = useMemo(
@@ -67,7 +76,7 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
     return exercises.filter((e) => {
       if (query && !e.name.toLowerCase().includes(query)) return false;
       if (primaryLift !== "all" && e.primary_lift !== primaryLift) return false;
-      if (muscleGroup !== "all" && e.muscle_group !== muscleGroup) return false;
+      if (muscleGroup !== "all" && !e.muscle_groups.some((mg) => mg.muscle_group === muscleGroup)) return false;
       if (equipment !== "all" && e.equipment !== equipment) return false;
       if (difficulty === NOT_RATED) {
         if (e.difficulty !== null) return false;
@@ -111,7 +120,7 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
             <option value="all">All Muscle Groups</option>
             {muscleGroups.map((mg) => (
               <option key={mg} value={mg}>
-                {mg}
+                {MUSCLE_GROUP_LABELS[mg]}
               </option>
             ))}
           </select>
@@ -149,30 +158,33 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
         <p className="text-sm text-neutral-500">No exercises match your filters.</p>
       ) : (
         <ul className="space-y-2">
-          {filtered.map((exercise) => (
-            <li
-              key={exercise.id}
-              className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
-            >
-              <div className="flex items-center justify-between gap-3">
-                <span className="font-medium text-white">{exercise.name}</span>
-                <span
-                  className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${
-                    exercise.difficulty
-                      ? (DIFFICULTY_STYLES[exercise.difficulty] ?? NOT_RATED_STYLE)
-                      : NOT_RATED_STYLE
-                  }`}
-                >
-                  {exercise.difficulty ? DIFFICULTY_LABELS[exercise.difficulty] ?? exercise.difficulty : "Not rated"}
-                </span>
-              </div>
-              {(exercise.muscle_group || exercise.equipment) && (
-                <p className="mt-1 text-sm text-neutral-500">
-                  {[exercise.muscle_group, exercise.equipment].filter(Boolean).join(" · ")}
-                </p>
-              )}
-            </li>
-          ))}
+          {filtered.map((exercise) => {
+            const muscleGroupText = formatMuscleGroups(exercise.muscle_groups);
+            return (
+              <li
+                key={exercise.id}
+                className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-medium text-white">{exercise.name}</span>
+                  <span
+                    className={`shrink-0 rounded px-2 py-0.5 text-xs font-semibold ${
+                      exercise.difficulty
+                        ? (DIFFICULTY_STYLES[exercise.difficulty] ?? NOT_RATED_STYLE)
+                        : NOT_RATED_STYLE
+                    }`}
+                  >
+                    {exercise.difficulty ? DIFFICULTY_LABELS[exercise.difficulty] ?? exercise.difficulty : "Not rated"}
+                  </span>
+                </div>
+                {(muscleGroupText || exercise.equipment) && (
+                  <p className="mt-1 text-sm text-neutral-500">
+                    {[muscleGroupText, exercise.equipment].filter(Boolean).join(" · ")}
+                  </p>
+                )}
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

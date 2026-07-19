@@ -7,6 +7,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { ExercisePickerOption } from "@/components/ExerciseSearchPicker";
+import { MUSCLE_GROUPS, type ExerciseMuscleGroup, type MuscleGroup } from "@/lib/lifting/muscleGroups";
 
 // "sets" is a UI convenience for logging several identical sets in one
 // submission (defaults to 1, matching every prior caller that never sent
@@ -60,13 +61,12 @@ export async function logAccessorySet(formData: FormData) {
 }
 
 // Inline "+ Add new exercise" from the Log Sets flow — a lightweight
-// custom-exercise entry (name + muscle_group, primary_lift hardcoded to
-// 'general' so it never gets treated as a competition lift). muscle_group
-// is required so this path can't keep silently producing null rows for a
-// future volume-by-muscle-group feature — the picker in LogSetsForm sources
-// its options from the same exercises data, same derivation as the
-// Exercise Library's filter. Needs the exercises-insert RLS policy added
-// in 0021_exercises_insert_policy.sql.
+// custom-exercise entry (name + one-or-more muscle_group/ratio pairs,
+// primary_lift hardcoded to 'general' so it never gets treated as a
+// competition lift). At least one muscle group is required so this path
+// can't keep silently producing unclassified rows for a future
+// volume-by-muscle-group feature. Needs the exercises-insert and
+// exercise_muscle_groups-insert RLS policies from 0021/0022.
 export async function createExercise(
   formData: FormData,
 ): Promise<{ success: true; exercise: ExercisePickerOption } | { success: false }> {
@@ -78,14 +78,32 @@ export async function createExercise(
 
   const nameRaw = (formData.get("name") as string) || "";
   const name = nameRaw.trim();
-  const muscleGroupRaw = (formData.get("muscle_group") as string) || "";
-  const muscleGroup = muscleGroupRaw.trim();
-  if (!name || !muscleGroup) return { success: false };
+  if (!name) return { success: false };
+
+  const muscleGroupValues = formData.getAll("muscle_group") as string[];
+  const ratioValues = formData.getAll("ratio") as string[];
+  if (muscleGroupValues.length === 0 || muscleGroupValues.length !== ratioValues.length) {
+    return { success: false };
+  }
+
+  const isMuscleGroup = (value: string): value is MuscleGroup =>
+    (MUSCLE_GROUPS as readonly string[]).includes(value);
+
+  const muscleGroups: ExerciseMuscleGroup[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < muscleGroupValues.length; i++) {
+    const muscleGroup = muscleGroupValues[i];
+    const ratio = parseFloat(ratioValues[i]);
+    if (!isMuscleGroup(muscleGroup) || seen.has(muscleGroup)) return { success: false };
+    if (!Number.isFinite(ratio) || ratio <= 0 || ratio > 1) return { success: false };
+    seen.add(muscleGroup);
+    muscleGroups.push({ muscle_group: muscleGroup, ratio });
+  }
 
   const { data: exercise, error } = await supabase
     .from("exercises")
-    .insert({ name, primary_lift: "general", muscle_group: muscleGroup })
-    .select("id, name, muscle_group, equipment")
+    .insert({ name, primary_lift: "general" })
+    .select("id, name, equipment")
     .single();
 
   if (error || !exercise) {
@@ -93,9 +111,28 @@ export async function createExercise(
     return { success: false };
   }
 
+  // Best-effort, same tolerance as logSet's personal_records insert: the
+  // exercise row is the primary record and already exists at this point.
+  // A failure here leaves it with zero muscle-group rows — the same
+  // "not yet classified" state as an unbackfilled exercise, recoverable
+  // via the same backfill path, not a corrupted invariant.
+  const { error: mgError } = await supabase.from("exercise_muscle_groups").insert(
+    muscleGroups.map((mg) => ({
+      exercise_id: exercise.id,
+      muscle_group: mg.muscle_group,
+      ratio: mg.ratio,
+    })),
+  );
+  if (mgError) {
+    console.error("[createExercise] exercise_muscle_groups insert failed:", mgError);
+  }
+
   revalidatePath("/dashboard");
   revalidatePath("/exercises");
-  return { success: true, exercise };
+  return {
+    success: true,
+    exercise: { id: exercise.id, name: exercise.name, equipment: exercise.equipment, muscle_groups: muscleGroups },
+  };
 }
 
 export async function deleteAccessoryLog(id: string) {
