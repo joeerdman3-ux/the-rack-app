@@ -152,16 +152,18 @@ export function StandardsPanel({
           );
         }
 
-        const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
-
         if (d.status === "tied") {
+          const clauses = d.labels.map((label, i) => {
+            const percent = Math.round((d.counts[i] / d.totalTaggedMisses) * 100);
+            return `${label} (${d.counts[i]} of ${d.totalTaggedMisses}, ${percent}%)`;
+          });
           return (
             <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
               <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
               <p className="mb-4 text-sm text-neutral-400">
-                Your {d.lift} misses are split evenly between {joinLabels(d.labels)}
+                Your {d.lift} misses point evenly toward {joinLabels(clauses)}
                 {isLowConfidence(d.lift) && " (based on limited data)"} — consider prescriptions for
-                both ({d.count} of {d.totalTaggedMisses} missed sets each, {percent}%).
+                both.
               </p>
               <ul className="space-y-3">
                 {d.prescriptions.map((p, i) => (
@@ -176,6 +178,8 @@ export function StandardsPanel({
             </div>
           );
         }
+
+        const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
 
         return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">

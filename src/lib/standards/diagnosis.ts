@@ -43,12 +43,31 @@ export interface LaggingRatio {
 export interface MissedSet {
   lift: string;
   sticking_point: string | null;
+  logged_date: string;
 }
 
 // Below this many missed-and-tagged sets for a lift, the most-common
 // sticking point is too noisy to act on — a single bad rep shouldn't drive
-// a full accessory-work recommendation.
+// a full accessory-work recommendation. Always evaluated against the RAW,
+// unweighted count — recency weighting (below) only ever affects which
+// sticking point wins once a lift has cleared this gate, never whether it
+// clears it, so a user can't regress from "ready" back to "pending" just
+// because time passed.
 export const MIN_MISSED_SETS_FOR_DIAGNOSIS = 3;
+
+// Two-tier recency weighting for sticking-point winner selection: a miss
+// counts fully for RECENCY_CUTOFF_MONTHS, then drops to a reduced (but
+// never zero) weight — old data still counts, it just stops dominating a
+// fresher trend. Two-tier rather than continuous decay specifically so
+// ties stay exact and explainable (only two possible per-miss weights)
+// instead of floating-point coincidences.
+const RECENCY_CUTOFF_MONTHS = 6;
+const RECENT_MISS_WEIGHT = 1.0;
+const OLDER_MISS_WEIGHT = 0.5;
+
+function isWithinRecencyCutoff(loggedDate: string, cutoff: Date): boolean {
+  return new Date(loggedDate) >= cutoff;
+}
 
 export interface StickingPointDiagnosis {
   status: "ready";
@@ -60,15 +79,20 @@ export interface StickingPointDiagnosis {
   totalTaggedMisses: number;
 }
 
-// Two or more sticking points tied for most-frequent — arbitrarily picking
-// one would misrepresent the signal, so this carries all of them instead.
+// Two or more sticking points tied for most-frequent (by recency-weighted
+// sum) — arbitrarily picking one would misrepresent the signal, so this
+// carries all of them instead. counts is parallel to stickingPoints/labels
+// rather than a single shared number: two points can tie on weighted sum
+// while having different RAW counts (e.g. 2 recent misses at weight 1.0
+// vs. 4 older ones at weight 0.5 both sum to 2.0), so each point's honest
+// raw count has to be tracked individually.
 export interface TiedStickingPointDiagnosis {
   status: "tied";
   lift: MainLift;
   stickingPoints: StickingPoint[];
   labels: string[];
   prescriptions: ExercisePrescription[];
-  count: number;
+  counts: number[];
   totalTaggedMisses: number;
 }
 
@@ -149,22 +173,33 @@ export function diagnose(
   // doesn't silently drop lifts ordered later in MAIN_LIFTS (e.g. Overhead
   // Press) from ever getting a diagnosis when they tie with an earlier lift.
   //
-  // If multiple sticking points tie for most-frequent, a "tied" entry
-  // carries all of them rather than arbitrarily picking one — the signal
-  // genuinely doesn't point at a single weak spot.
+  // The winning sticking point (and ties) are picked by recency-weighted
+  // sum, not raw count — see RECENCY_CUTOFF_MONTHS above. The count/
+  // totalTaggedMisses on the returned diagnosis stay RAW (unweighted),
+  // since those are the honest, easy-to-explain numbers shown in the UI
+  // ("4 of 5 missed sets") — weighting is invisible except in which point
+  // it selects.
   //
   // prescriptions is intentionally left empty here: this function stays
   // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
   // for querying sticking_point_prescriptions + exercises for each "ready"/
   // "tied" stickingPoint and filling the arrays in before rendering.
+  const recencyCutoff = new Date();
+  recencyCutoff.setMonth(recencyCutoff.getMonth() - RECENCY_CUTOFF_MONTHS);
+
   const stickingPointDiagnoses: StickingPointDiagnosisResult[] = [];
   for (const lift of weakestLifts) {
-    const counts = new Map<string, number>();
+    const weightedSums = new Map<string, number>();
+    const rawCounts = new Map<string, number>();
     let taggedMisses = 0;
     for (const set of missedSets) {
       if (set.lift !== lift || !set.sticking_point) continue;
       taggedMisses++;
-      counts.set(set.sticking_point, (counts.get(set.sticking_point) ?? 0) + 1);
+      const weight = isWithinRecencyCutoff(set.logged_date, recencyCutoff)
+        ? RECENT_MISS_WEIGHT
+        : OLDER_MISS_WEIGHT;
+      weightedSums.set(set.sticking_point, (weightedSums.get(set.sticking_point) ?? 0) + weight);
+      rawCounts.set(set.sticking_point, (rawCounts.get(set.sticking_point) ?? 0) + 1);
     }
 
     if (taggedMisses < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
@@ -178,14 +213,17 @@ export function diagnose(
       continue;
     }
 
-    // taggedMisses >= MIN_MISSED_SETS_FOR_DIAGNOSIS (> 0) guarantees counts
-    // is non-empty, so topPoints always has at least one entry here.
-    let topCount = 0;
-    for (const count of counts.values()) {
-      if (count > topCount) topCount = count;
+    // taggedMisses >= MIN_MISSED_SETS_FOR_DIAGNOSIS (> 0) guarantees
+    // weightedSums is non-empty, so topPoints always has at least one
+    // entry here. Only two possible per-miss weights (1.0 or 0.5) means
+    // summed weights land on a small set of exact values, so this === is
+    // a real tie, not a floating-point coincidence.
+    let topWeight = 0;
+    for (const weight of weightedSums.values()) {
+      if (weight > topWeight) topWeight = weight;
     }
-    const topPoints = [...counts.entries()]
-      .filter(([, count]) => count === topCount)
+    const topPoints = [...weightedSums.entries()]
+      .filter(([, weight]) => weight === topWeight)
       .map(([point]) => point as StickingPoint);
 
     if (topPoints.length > 1) {
@@ -195,7 +233,7 @@ export function diagnose(
         stickingPoints: topPoints,
         labels: topPoints.map((sp) => STICKING_POINT_LABELS[sp]),
         prescriptions: [],
-        count: topCount,
+        counts: topPoints.map((sp) => rawCounts.get(sp)!),
         totalTaggedMisses: taggedMisses,
       });
     } else {
@@ -206,7 +244,7 @@ export function diagnose(
         stickingPoint,
         label: STICKING_POINT_LABELS[stickingPoint],
         prescriptions: [],
-        count: topCount,
+        count: rawCounts.get(stickingPoint)!,
         totalTaggedMisses: taggedMisses,
       });
     }
