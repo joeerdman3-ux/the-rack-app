@@ -22,6 +22,9 @@ export interface Exercise {
   description: string | null;
   muscle_groups: ExerciseMuscleGroup[];
   difficulty: string | null;
+  // null = preset/seeded (locked); a user id = created by that user, the
+  // only one who can edit it. See 0024_exercises_created_by.sql.
+  created_by: string | null;
 }
 
 const PRIMARY_LIFT_LABELS: Record<string, string> = {
@@ -58,9 +61,11 @@ const selectClasses =
 export function ExerciseLibrary({
   exercises,
   updateExerciseAction,
+  currentUserId,
 }: {
   exercises: Exercise[];
   updateExerciseAction: typeof updateExercise;
+  currentUserId: string;
 }) {
   const [search, setSearch] = useState("");
   const [primaryLift, setPrimaryLift] = useState("all");
@@ -270,13 +275,15 @@ export function ExerciseLibrary({
                     {[muscleGroupText, exercise.equipment].filter(Boolean).join(" · ")}
                   </p>
                 )}
-                <button
-                  type="button"
-                  onClick={() => startEditing(exercise)}
-                  className="mt-2 text-xs text-orange-500 hover:underline"
-                >
-                  Edit
-                </button>
+                {exercise.created_by === currentUserId && (
+                  <button
+                    type="button"
+                    onClick={() => startEditing(exercise)}
+                    className="mt-2 text-xs text-orange-500 hover:underline"
+                  >
+                    Edit
+                  </button>
+                )}
               </li>
             );
           })}

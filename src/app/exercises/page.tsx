@@ -14,7 +14,7 @@ export default async function ExercisesPage() {
 
   const { data: exercises } = await supabase
     .from("exercises")
-    .select("id, name, primary_lift, movement_pattern, equipment, description, difficulty")
+    .select("id, name, primary_lift, movement_pattern, equipment, description, difficulty, created_by")
     .order("name", { ascending: true });
 
   // exercise_muscle_groups is a separate table (many-to-many, ratio-weighted)
@@ -47,7 +47,11 @@ export default async function ExercisesPage() {
           </Link>
         </div>
 
-        <ExerciseLibrary exercises={exercisesWithMuscleGroups} updateExerciseAction={updateExercise} />
+        <ExerciseLibrary
+          exercises={exercisesWithMuscleGroups}
+          updateExerciseAction={updateExercise}
+          currentUserId={user.id}
+        />
       </div>
     </div>
   );

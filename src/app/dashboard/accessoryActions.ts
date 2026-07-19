@@ -65,8 +65,11 @@ export async function logAccessorySet(formData: FormData) {
 // primary_lift hardcoded to 'general' so it never gets treated as a
 // competition lift). At least one muscle group is required so this path
 // can't keep silently producing unclassified rows for a future
-// volume-by-muscle-group feature. Needs the exercises-insert and
-// exercise_muscle_groups-insert RLS policies from 0021/0022.
+// volume-by-muscle-group feature. created_by is set to the creating user
+// so this exercise is editable later — see updateExercise in
+// src/app/exercises/actions.ts and the ownership-scoped RLS policies from
+// 0024. Needs the exercises-insert and exercise_muscle_groups-insert RLS
+// policies from 0021/0022/0024.
 export async function createExercise(
   formData: FormData,
 ): Promise<{ success: true; exercise: ExercisePickerOption } | { success: false }> {
@@ -102,7 +105,7 @@ export async function createExercise(
 
   const { data: exercise, error } = await supabase
     .from("exercises")
-    .insert({ name, primary_lift: "general" })
+    .insert({ name, primary_lift: "general", created_by: user.id })
     .select("id, name, equipment")
     .single();
 

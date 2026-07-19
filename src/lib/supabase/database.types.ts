@@ -229,6 +229,9 @@ export type Database = {
           equipment: string | null;
           description: string | null;
           difficulty: string | null;
+          // null = preset/seeded (locked); a user id = created by (and
+          // only editable by) that user. Added in 0024.
+          created_by: string | null;
         };
         Insert: {
           id?: string;
@@ -238,6 +241,7 @@ export type Database = {
           equipment?: string | null;
           description?: string | null;
           difficulty?: string | null;
+          created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
         Relationships: [];
