@@ -86,7 +86,7 @@ export default async function DashboardPage() {
 
   const { data: missedSets } = await supabase
     .from("workouts")
-    .select("lift, sticking_point")
+    .select("lift, sticking_point, logged_date")
     .eq("user_id", user.id)
     .eq("missed", true);
 
