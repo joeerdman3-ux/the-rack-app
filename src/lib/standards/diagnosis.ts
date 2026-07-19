@@ -163,15 +163,21 @@ export function diagnose(
     }
   }
 
-  // For every lift tied for lowest tier, find its most commonly reported
-  // sticking point (from missed sets where one was logged). Below
-  // MIN_MISSED_SETS_FOR_DIAGNOSIS total tagged misses for that lift, a
-  // "pending" entry is returned instead of a prescription — a single bad
-  // rep shouldn't drive a full recommendation, but the UI still needs to
-  // tell the user how many more they need rather than showing nothing.
-  // Iterating all of weakestLifts (not just weakestLifts[0]) ensures a tie
-  // doesn't silently drop lifts ordered later in MAIN_LIFTS (e.g. Overhead
-  // Press) from ever getting a diagnosis when they tie with an earlier lift.
+  // For EVERY main lift (not just the weakest-tier one(s)) with at least
+  // one tagged miss, find its most commonly reported sticking point. A
+  // lift the user has never marked a miss on is skipped entirely — no
+  // card, not even "pending" — since there's no signal to act on at all.
+  // Below MIN_MISSED_SETS_FOR_DIAGNOSIS total tagged misses for a lift
+  // that DOES have some, a "pending" entry is returned instead of a
+  // prescription — a single bad rep shouldn't drive a full recommendation,
+  // but the UI still needs to tell the user how many more they need rather
+  // than showing nothing.
+  //
+  // "Weakest tier" no longer gates whether a lift gets analyzed — Bench
+  // Press misses are worth surfacing even when Bench isn't your weakest
+  // lift right now. weakestLifts still drives prioritization: entries are
+  // sorted so weakest-tier lifts come first (see the sort below), and the
+  // UI can badge them distinctly.
   //
   // The winning sticking point (and ties) are picked by recency-weighted
   // sum, not raw count — see RECENCY_CUTOFF_MONTHS above. The count/
@@ -188,7 +194,7 @@ export function diagnose(
   recencyCutoff.setMonth(recencyCutoff.getMonth() - RECENCY_CUTOFF_MONTHS);
 
   const stickingPointDiagnoses: StickingPointDiagnosisResult[] = [];
-  for (const lift of weakestLifts) {
+  for (const lift of MAIN_LIFTS) {
     const weightedSums = new Map<string, number>();
     const rawCounts = new Map<string, number>();
     let taggedMisses = 0;
@@ -201,6 +207,8 @@ export function diagnose(
       weightedSums.set(set.sticking_point, (weightedSums.get(set.sticking_point) ?? 0) + weight);
       rawCounts.set(set.sticking_point, (rawCounts.get(set.sticking_point) ?? 0) + 1);
     }
+
+    if (taggedMisses === 0) continue;
 
     if (taggedMisses < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
       stickingPointDiagnoses.push({
@@ -249,6 +257,15 @@ export function diagnose(
       });
     }
   }
+
+  // weakestLifts entries come first (stable sort — ties keep MAIN_LIFTS
+  // order) so the UI can lead with what to prioritize, even though every
+  // lift with enough tagged misses now gets a diagnosis.
+  stickingPointDiagnoses.sort((a, b) => {
+    const aWeakest = weakestLifts.includes(a.lift) ? 0 : 1;
+    const bWeakest = weakestLifts.includes(b.lift) ? 0 : 1;
+    return aWeakest - bWeakest;
+  });
 
   return { standings, weakestLifts, laggingRatios, stickingPointDiagnoses };
 }

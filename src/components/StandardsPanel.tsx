@@ -139,10 +139,22 @@ export function StandardsPanel({
       </div>
 
       {diagnosis.stickingPointDiagnoses.map((d) => {
+        const isWeakest = diagnosis.weakestLifts.includes(d.lift);
+        const heading = (
+          <h2 className="mb-1 flex items-center gap-2 text-lg font-semibold text-white">
+            Prescribed accessory work
+            {isWeakest && (
+              <span className="rounded px-2 py-0.5 text-xs font-semibold bg-orange-950 text-orange-300">
+                Weakest lift
+              </span>
+            )}
+          </h2>
+        );
+
         if (d.status === "pending") {
           return (
             <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
-              <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+              {heading}
               <p className="text-sm text-neutral-400">
                 Log {d.remainingCount} more missed {d.lift} set{d.remainingCount === 1 ? "" : "s"}{" "}
                 with a sticking point tagged to unlock your diagnosis ({d.currentCount}/{d.threshold}
@@ -159,7 +171,7 @@ export function StandardsPanel({
           });
           return (
             <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
-              <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+              {heading}
               <p className="mb-4 text-sm text-neutral-400">
                 Your {d.lift} misses point evenly toward {joinLabels(clauses)}
                 {isLowConfidence(d.lift) && " (based on limited data)"} — consider prescriptions for
@@ -183,7 +195,7 @@ export function StandardsPanel({
 
         return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
-            <h2 className="mb-1 text-lg font-semibold text-white">Prescribed accessory work</h2>
+            {heading}
             <p className="mb-4 text-sm text-neutral-400">
               Most-reported sticking point on {d.lift}
               {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
