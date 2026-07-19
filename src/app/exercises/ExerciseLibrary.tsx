@@ -6,6 +6,12 @@ import {
   formatMuscleGroups,
   type ExerciseMuscleGroup,
 } from "@/lib/lifting/muscleGroups";
+import {
+  MuscleGroupRowsFields,
+  EMPTY_MUSCLE_GROUP_ROW,
+  type MuscleGroupRow,
+} from "@/components/MuscleGroupRowsFields";
+import type { updateExercise } from "./actions";
 
 export interface Exercise {
   id: string;
@@ -49,12 +55,38 @@ const NOT_RATED_STYLE = "bg-neutral-800 text-neutral-300";
 const selectClasses =
   "rounded-md border border-neutral-700 bg-neutral-900 px-3 py-1.5 text-sm text-white outline-none focus:border-orange-500";
 
-export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
+export function ExerciseLibrary({
+  exercises,
+  updateExerciseAction,
+}: {
+  exercises: Exercise[];
+  updateExerciseAction: typeof updateExercise;
+}) {
   const [search, setSearch] = useState("");
   const [primaryLift, setPrimaryLift] = useState("all");
   const [muscleGroup, setMuscleGroup] = useState("all");
   const [equipment, setEquipment] = useState("all");
   const [difficulty, setDifficulty] = useState("all");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editMuscleGroupRows, setEditMuscleGroupRows] = useState<MuscleGroupRow[]>([
+    { ...EMPTY_MUSCLE_GROUP_ROW },
+  ]);
+  const [saving, setSaving] = useState(false);
+
+  function startEditing(exercise: Exercise) {
+    setEditingId(exercise.id);
+    setEditName(exercise.name);
+    setEditMuscleGroupRows(
+      exercise.muscle_groups.length > 0
+        ? exercise.muscle_groups.map((mg) => ({
+            muscleGroup: mg.muscle_group,
+            ratio: String(mg.ratio),
+          }))
+        : [{ ...EMPTY_MUSCLE_GROUP_ROW }],
+    );
+  }
 
   // Data-derived (not the full canonical list) so the filter only offers
   // groups that actually match something currently loaded — unlike the
@@ -159,6 +191,62 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
       ) : (
         <ul className="space-y-2">
           {filtered.map((exercise) => {
+            if (editingId === exercise.id) {
+              return (
+                <li
+                  key={exercise.id}
+                  className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3"
+                >
+                  <form
+                    action={async (formData) => {
+                      setSaving(true);
+                      const result = await updateExerciseAction(formData);
+                      setSaving(false);
+                      if (result.success) {
+                        setEditingId(null);
+                      }
+                    }}
+                    className="space-y-3"
+                  >
+                    <input type="hidden" name="id" value={exercise.id} />
+                    <div>
+                      <label htmlFor="edit-exercise-name" className="block text-sm text-neutral-300">
+                        Name
+                      </label>
+                      <input
+                        id="edit-exercise-name"
+                        name="name"
+                        type="text"
+                        required
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
+                      />
+                    </div>
+
+                    <MuscleGroupRowsFields rows={editMuscleGroupRows} onChange={setEditMuscleGroupRows} />
+
+                    <div className="flex gap-2">
+                      <button
+                        type="submit"
+                        disabled={saving}
+                        className="rounded-md bg-orange-600 px-3 py-1.5 text-sm font-semibold text-white hover:bg-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {saving ? "Saving..." : "Save"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingId(null)}
+                        className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </form>
+                </li>
+              );
+            }
+
             const muscleGroupText = formatMuscleGroups(exercise.muscle_groups);
             return (
               <li
@@ -182,6 +270,13 @@ export function ExerciseLibrary({ exercises }: { exercises: Exercise[] }) {
                     {[muscleGroupText, exercise.equipment].filter(Boolean).join(" · ")}
                   </p>
                 )}
+                <button
+                  type="button"
+                  onClick={() => startEditing(exercise)}
+                  className="mt-2 text-xs text-orange-500 hover:underline"
+                >
+                  Edit
+                </button>
               </li>
             );
           })}

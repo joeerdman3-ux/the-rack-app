@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ExerciseLibrary } from "./ExerciseLibrary";
+import { updateExercise } from "./actions";
 import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
 
 export default async function ExercisesPage() {
@@ -46,7 +47,7 @@ export default async function ExercisesPage() {
           </Link>
         </div>
 
-        <ExerciseLibrary exercises={exercisesWithMuscleGroups} />
+        <ExerciseLibrary exercises={exercisesWithMuscleGroups} updateExerciseAction={updateExercise} />
       </div>
     </div>
   );

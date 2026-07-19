@@ -3,19 +3,12 @@
 import { useState } from "react";
 import type { Unit } from "@/lib/lifting/plates";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
-import { MUSCLE_GROUPS, MUSCLE_GROUP_LABELS } from "@/lib/lifting/muscleGroups";
+import {
+  MuscleGroupRowsFields,
+  EMPTY_MUSCLE_GROUP_ROW,
+  type MuscleGroupRow,
+} from "@/components/MuscleGroupRowsFields";
 import type { logAccessorySet, createExercise } from "./accessoryActions";
-
-interface MuscleGroupRow {
-  muscleGroup: string;
-  ratio: string;
-}
-
-const EMPTY_MUSCLE_GROUP_ROW: MuscleGroupRow = { muscleGroup: "", ratio: "" };
-// Implied ratio for the common case: one muscle group means it's the whole
-// contribution. Ratio only becomes a user-facing input once a second row
-// is added and the split actually needs to be specified.
-const SINGLE_ROW_RATIO = "1";
 
 // Writes to accessory_logs via exercise_id — same table/shape as the
 // Accessory tab, not workouts and not a free-text lift field — so this can
@@ -40,23 +33,6 @@ export function LogSetsForm({
     { ...EMPTY_MUSCLE_GROUP_ROW },
   ]);
   const [creating, setCreating] = useState(false);
-
-  function updateMuscleGroupRow(index: number, patch: Partial<MuscleGroupRow>) {
-    setMuscleGroupRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-  }
-
-  function addMuscleGroupRow() {
-    setMuscleGroupRows((prev) => [...prev, { ...EMPTY_MUSCLE_GROUP_ROW }]);
-  }
-
-  function removeMuscleGroupRow(index: number) {
-    setMuscleGroupRows((prev) => {
-      const next = prev.filter((_, i) => i !== index);
-      // Collapsing back to a single row means the split no longer applies —
-      // that row is implicitly the whole contribution again.
-      return next.length === 1 ? [{ ...next[0], ratio: SINGLE_ROW_RATIO }] : next;
-    });
-  }
 
   function resetNewExerciseForm() {
     setNewExerciseName("");
@@ -103,73 +79,7 @@ export function LogSetsForm({
                 />
               </div>
 
-              <div className="space-y-2">
-                <span className="block text-sm text-neutral-300">Muscle group(s)</span>
-                {muscleGroupRows.map((row, index) => {
-                  // Excludes groups already picked in OTHER rows, so the
-                  // same muscle group can't be added twice.
-                  const availableGroups = MUSCLE_GROUPS.filter(
-                    (mg) => mg === row.muscleGroup || !muscleGroupRows.some((r) => r.muscleGroup === mg),
-                  );
-                  return (
-                    <div key={index} className="flex gap-2">
-                      <select
-                        aria-label={`Muscle group ${index + 1}`}
-                        name="muscle_group"
-                        required
-                        value={row.muscleGroup}
-                        onChange={(e) => updateMuscleGroupRow(index, { muscleGroup: e.target.value })}
-                        className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
-                      >
-                        <option value="" disabled>
-                          Select muscle group
-                        </option>
-                        {availableGroups.map((mg) => (
-                          <option key={mg} value={mg}>
-                            {MUSCLE_GROUP_LABELS[mg]}
-                          </option>
-                        ))}
-                      </select>
-                      {muscleGroupRows.length > 1 ? (
-                        <>
-                          <input
-                            aria-label={`Ratio for muscle group ${index + 1}`}
-                            name="ratio"
-                            type="number"
-                            inputMode="decimal"
-                            step={0.05}
-                            min={0.01}
-                            max={1}
-                            required
-                            value={row.ratio}
-                            onChange={(e) => updateMuscleGroupRow(index, { ratio: e.target.value })}
-                            placeholder="Ratio"
-                            className="w-20 shrink-0 rounded-md border border-neutral-700 bg-neutral-900 px-2 py-2 text-white outline-none focus:border-orange-500"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => removeMuscleGroupRow(index)}
-                            className="shrink-0 rounded-md border border-neutral-700 px-2 py-2 text-xs text-neutral-400 hover:bg-neutral-800"
-                          >
-                            Remove
-                          </button>
-                        </>
-                      ) : (
-                        <input type="hidden" name="ratio" value={SINGLE_ROW_RATIO} />
-                      )}
-                    </div>
-                  );
-                })}
-                {muscleGroupRows.length < MUSCLE_GROUPS.length && (
-                  <button
-                    type="button"
-                    onClick={addMuscleGroupRow}
-                    className="text-xs text-orange-500 hover:underline"
-                  >
-                    + Add muscle group
-                  </button>
-                )}
-              </div>
+              <MuscleGroupRowsFields rows={muscleGroupRows} onChange={setMuscleGroupRows} />
 
               <div className="flex gap-2">
                 <button
