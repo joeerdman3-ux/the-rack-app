@@ -164,20 +164,26 @@ export function diagnose(
   }
 
   // For EVERY main lift (not just the weakest-tier one(s)) with at least
-  // one tagged miss, find its most commonly reported sticking point. A
-  // lift the user has never marked a miss on is skipped entirely — no
-  // card, not even "pending" — since there's no signal to act on at all.
+  // one tagged miss, find its most commonly reported sticking point.
   // Below MIN_MISSED_SETS_FOR_DIAGNOSIS total tagged misses for a lift
   // that DOES have some, a "pending" entry is returned instead of a
   // prescription — a single bad rep shouldn't drive a full recommendation,
   // but the UI still needs to tell the user how many more they need rather
   // than showing nothing.
   //
-  // "Weakest tier" no longer gates whether a lift gets analyzed — Bench
-  // Press misses are worth surfacing even when Bench isn't your weakest
-  // lift right now. weakestLifts still drives prioritization: entries are
-  // sorted so weakest-tier lifts come first (see the sort below), and the
-  // UI can badge them distinctly.
+  // Zero-tagged-miss lifts are handled asymmetrically: a weakest-tier lift
+  // still gets a "pending 0/N" card — that's the nudge that gets a user to
+  // start tagging misses on the lift that matters most, and losing it would
+  // regress today's most valuable behavior. A non-weakest lift with zero
+  // tagged misses is skipped entirely (no card) — there's no signal to act
+  // on yet, and showing "0/3" for every lift the user isn't focused on
+  // would just be clutter.
+  //
+  // "Weakest tier" no longer gates whether a lift gets ANALYZED once it has
+  // misses — Bench Press misses are worth surfacing even when Bench isn't
+  // your weakest lift right now. weakestLifts still drives prioritization:
+  // entries are sorted so weakest-tier lifts come first (see the sort
+  // below), and the UI can badge them distinctly.
   //
   // The winning sticking point (and ties) are picked by recency-weighted
   // sum, not raw count — see RECENCY_CUTOFF_MONTHS above. The count/
@@ -208,7 +214,7 @@ export function diagnose(
       rawCounts.set(set.sticking_point, (rawCounts.get(set.sticking_point) ?? 0) + 1);
     }
 
-    if (taggedMisses === 0) continue;
+    if (taggedMisses === 0 && !weakestLifts.includes(lift)) continue;
 
     if (taggedMisses < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
       stickingPointDiagnoses.push({
