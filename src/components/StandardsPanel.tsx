@@ -58,6 +58,9 @@ export function StandardsPanel({
   }
 
   const anyLowConfidence = diagnosis.standings.some((s) => isLowConfidence(s.lift));
+  // Lagging ratios connected to a "ready" sticking-point diagnosis render
+  // combined into that lift's accessory-work card instead — see below.
+  const standaloneLaggingRatios = diagnosis.laggingRatios.filter((r) => !r.connectedDiagnosis);
 
   return (
     <section className="mt-8 space-y-6">
@@ -113,9 +116,11 @@ export function StandardsPanel({
       <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
         <h2 className="mb-3 text-lg font-semibold text-white">Weak-point diagnosis</h2>
 
-        {diagnosis.weakestLifts.length === 0 && diagnosis.laggingRatios.length === 0 ? (
+        {diagnosis.weakestLifts.length === 0 && standaloneLaggingRatios.length === 0 ? (
           <p className="text-sm text-neutral-500">
-            Log at least two main lifts to get a diagnosis.
+            {diagnosis.laggingRatios.length > 0
+              ? "Your lagging-ratio insight is shown below, combined with its sticking-point diagnosis."
+              : "Log at least two main lifts to get a diagnosis."}
           </p>
         ) : (
           <div className="space-y-3 text-sm">
@@ -128,10 +133,10 @@ export function StandardsPanel({
                 — focus your accessory work here.
               </p>
             )}
-            {diagnosis.laggingRatios.map((r) => (
+            {standaloneLaggingRatios.map((r) => (
               <p key={r.label} className="text-neutral-300">
                 <span className="font-semibold text-white">{r.label}</span> is lagging:
-                {" "}{r.actual.toFixed(2)}x actual vs {r.expected.toFixed(2)}x typical.
+                {" "}{r.actual.toFixed(2)}x actual vs {r.expected.toFixed(2)}x typical. {r.explanation}
               </p>
             ))}
           </div>
@@ -192,15 +197,30 @@ export function StandardsPanel({
         }
 
         const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
+        const connectedRatio = diagnosis.laggingRatios.find((r) => r.connectedDiagnosis === d);
 
         return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
             {heading}
             <p className="mb-4 text-sm text-neutral-400">
-              Most-reported sticking point on {d.lift}
-              {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
-              <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
-              {" "}missed sets, {percent}%)
+              {connectedRatio ? (
+                <>
+                  <span className="font-semibold text-white">{connectedRatio.label}</span> is lagging:
+                  {" "}{connectedRatio.actual.toFixed(2)}x actual vs {connectedRatio.expected.toFixed(2)}x
+                  {" "}typical. {connectedRatio.explanation} Your data backs this up — most-reported
+                  sticking point on {d.lift}
+                  {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
+                  <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
+                  {" "}missed sets, {percent}%)
+                </>
+              ) : (
+                <>
+                  Most-reported sticking point on {d.lift}
+                  {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
+                  <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
+                  {" "}missed sets, {percent}%)
+                </>
+              )}
             </p>
             <ul className="space-y-3">
               {d.prescriptions.map((p) => (

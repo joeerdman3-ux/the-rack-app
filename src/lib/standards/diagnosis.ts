@@ -23,12 +23,40 @@ interface RatioBenchmark {
   numerator: MainLift;
   denominator: MainLift;
   expected: number;
+  // Why this ratio sits where it does biomechanically, and what a lag
+  // usually (not definitely) implies — shown alongside every lagging-ratio
+  // message so the number isn't presented without context.
+  explanation: string;
 }
 
 const RATIO_BENCHMARKS: RatioBenchmark[] = [
-  { key: "benchToSquat", label: "Bench relative to squat", numerator: "Bench Press", denominator: "Squat", expected: 0.75 },
-  { key: "deadliftToSquat", label: "Deadlift relative to squat", numerator: "Deadlift", denominator: "Squat", expected: 1.2 },
-  { key: "ohpToBench", label: "Overhead press relative to bench", numerator: "Overhead Press", denominator: "Bench Press", expected: 0.6 },
+  {
+    key: "benchToSquat",
+    label: "Bench relative to squat",
+    numerator: "Bench Press",
+    denominator: "Squat",
+    expected: 0.75,
+    explanation:
+      "Bench typically runs about 0.75x squat — pressing recruits far less muscle mass than a hip-and-quad-dominant lift, so the ratio is naturally lower. A bench lagging well behind that usually points to a raw pressing-strength or triceps lockout gap, not a squat problem.",
+  },
+  {
+    key: "deadliftToSquat",
+    label: "Deadlift relative to squat",
+    numerator: "Deadlift",
+    denominator: "Squat",
+    expected: 1.2,
+    explanation:
+      "Deadlift typically runs about 1.2x squat because the deadlift doesn't have the eccentric/stretch-reflex assistance a squat gets — a deadlift that's only matching your squat usually points to a posterior chain or pulling-strength gap, not a squat problem.",
+  },
+  {
+    key: "ohpToBench",
+    label: "Overhead press relative to bench",
+    numerator: "Overhead Press",
+    denominator: "Bench Press",
+    expected: 0.6,
+    explanation:
+      "Overhead press typically runs about 0.6x bench because pressing overhead loses the chest's leverage and stability, putting more load on the shoulders and triceps alone. An OHP lagging well behind that usually points to a shoulder-pressing or overhead-stability gap, not a bench problem.",
+  },
 ];
 
 // A ratio more than 15% below the typical raw-lifting benchmark counts as lagging.
@@ -36,8 +64,19 @@ const LAG_TOLERANCE = 0.85;
 
 export interface LaggingRatio {
   label: string;
+  lift: MainLift;
+  referenceLift: MainLift;
   actual: number;
   expected: number;
+  explanation: string;
+  // Set when `lift` also has a "ready" sticking-point diagnosis — lets the
+  // UI fold the ratio-lag message and the sticking-point finding into one
+  // statement instead of two disconnected cards. Reference to the actual
+  // object in stickingPointDiagnoses (not a copy), so prescriptions filled
+  // in later by the caller stay in sync. Only "ready" connects — "tied" and
+  // "pending" stay standalone, since there's no single clear cause to point
+  // to yet.
+  connectedDiagnosis: StickingPointDiagnosis | null;
 }
 
 export interface MissedSet {
@@ -159,7 +198,15 @@ export function diagnose(
 
     const actual = numeratorBest / denominatorBest;
     if (actual < benchmark.expected * LAG_TOLERANCE) {
-      laggingRatios.push({ label: benchmark.label, actual, expected: benchmark.expected });
+      laggingRatios.push({
+        label: benchmark.label,
+        lift: benchmark.numerator,
+        referenceLift: benchmark.denominator,
+        actual,
+        expected: benchmark.expected,
+        explanation: benchmark.explanation,
+        connectedDiagnosis: null,
+      });
     }
   }
 
@@ -272,6 +319,18 @@ export function diagnose(
     const bWeakest = weakestLifts.includes(b.lift) ? 0 : 1;
     return aWeakest - bWeakest;
   });
+
+  // Fold a lagging ratio and its lift's sticking-point diagnosis into one
+  // statement wherever both exist, rather than showing two disconnected
+  // cards. Only "ready" connects (one specific, nameable cause) — "tied"
+  // and "pending" leave the ratio-lag message standalone, since there's
+  // nothing single and concrete yet to point the ratio at.
+  for (const ratio of laggingRatios) {
+    const match = stickingPointDiagnoses.find(
+      (d): d is StickingPointDiagnosis => d.status === "ready" && d.lift === ratio.lift,
+    );
+    if (match) ratio.connectedDiagnosis = match;
+  }
 
   return { standings, weakestLifts, laggingRatios, stickingPointDiagnoses };
 }
