@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { signOut } from "@/app/auth/actions";
 import { logSet, deleteSet } from "./actions";
-import { logAccessorySet, deleteAccessoryLog } from "./accessoryActions";
+import { logAccessorySet, deleteAccessoryLog, createExercise } from "./accessoryActions";
 import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
 import {
@@ -318,6 +318,7 @@ export default async function DashboardPage() {
           exercises={accessoryExercises ?? []}
           logSetAction={logSet}
           logAccessoryAction={logAccessorySet}
+          createExerciseAction={createExercise}
         />
 
         <section className="mt-8">
