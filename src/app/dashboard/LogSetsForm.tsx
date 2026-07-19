@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { Unit } from "@/lib/lifting/plates";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
 import type { logAccessorySet, createExercise } from "./accessoryActions";
@@ -24,7 +24,17 @@ export function LogSetsForm({
   const [selected, setSelected] = useState<ExercisePickerOption | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
+  const [newExerciseMuscleGroup, setNewExerciseMuscleGroup] = useState("");
   const [creating, setCreating] = useState(false);
+
+  // Same derivation as the Exercise Library's filter: the set of
+  // muscle_group values already in use, so new exercises stay consistent
+  // with existing ones instead of introducing free-text variants.
+  const muscleGroups = useMemo(
+    () =>
+      [...new Set(exercises.map((e) => e.muscle_group).filter((v): v is string => Boolean(v)))].sort(),
+    [exercises],
+  );
 
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("1");
@@ -47,6 +57,7 @@ export function LogSetsForm({
                   setSelected(result.exercise);
                   setAddingNew(false);
                   setNewExerciseName("");
+                  setNewExerciseMuscleGroup("");
                 }
               }}
               className="space-y-2 rounded-md border border-neutral-800 bg-neutral-950 p-3"
@@ -63,6 +74,26 @@ export function LogSetsForm({
                 onChange={(e) => setNewExerciseName(e.target.value)}
                 className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
               />
+              <label htmlFor="new-exercise-muscle-group" className="block text-sm text-neutral-300">
+                Muscle group
+              </label>
+              <select
+                id="new-exercise-muscle-group"
+                name="muscle_group"
+                required
+                value={newExerciseMuscleGroup}
+                onChange={(e) => setNewExerciseMuscleGroup(e.target.value)}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+              >
+                <option value="" disabled>
+                  Select muscle group
+                </option>
+                {muscleGroups.map((mg) => (
+                  <option key={mg} value={mg}>
+                    {mg}
+                  </option>
+                ))}
+              </select>
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -76,6 +107,7 @@ export function LogSetsForm({
                   onClick={() => {
                     setAddingNew(false);
                     setNewExerciseName("");
+                    setNewExerciseMuscleGroup("");
                   }}
                   className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
                 >

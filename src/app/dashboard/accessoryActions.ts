@@ -60,9 +60,13 @@ export async function logAccessorySet(formData: FormData) {
 }
 
 // Inline "+ Add new exercise" from the Log Sets flow — a lightweight
-// custom-exercise entry (name only, primary_lift hardcoded to 'general' so
-// it never gets treated as a competition lift). Needs the exercises-insert
-// RLS policy added in 0021_exercises_insert_policy.sql.
+// custom-exercise entry (name + muscle_group, primary_lift hardcoded to
+// 'general' so it never gets treated as a competition lift). muscle_group
+// is required so this path can't keep silently producing null rows for a
+// future volume-by-muscle-group feature — the picker in LogSetsForm sources
+// its options from the same exercises data, same derivation as the
+// Exercise Library's filter. Needs the exercises-insert RLS policy added
+// in 0021_exercises_insert_policy.sql.
 export async function createExercise(
   formData: FormData,
 ): Promise<{ success: true; exercise: ExercisePickerOption } | { success: false }> {
@@ -74,11 +78,13 @@ export async function createExercise(
 
   const nameRaw = (formData.get("name") as string) || "";
   const name = nameRaw.trim();
-  if (!name) return { success: false };
+  const muscleGroupRaw = (formData.get("muscle_group") as string) || "";
+  const muscleGroup = muscleGroupRaw.trim();
+  if (!name || !muscleGroup) return { success: false };
 
   const { data: exercise, error } = await supabase
     .from("exercises")
-    .insert({ name, primary_lift: "general" })
+    .insert({ name, primary_lift: "general", muscle_group: muscleGroup })
     .select("id, name, muscle_group, equipment")
     .single();
 
