@@ -338,6 +338,8 @@ export default async function ProgramPage({
                                 percentOfMax={pe.percent_of_max}
                                 isAmrap={pe.is_amrap}
                                 note={pe.note}
+                                unit={unit}
+                                trainingMaxKg={trainingMaxKgByExerciseId.get(pe.exercise_id) ?? null}
                                 action={updateProgramExercise}
                                 swapAction={swapProgramExercise}
                               />
