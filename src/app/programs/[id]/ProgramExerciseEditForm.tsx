@@ -4,6 +4,8 @@ import { useState } from "react";
 import type { updateProgramExercise, swapProgramExercise } from "../actions";
 import { formatSetsReps } from "@/lib/programs/setsReps";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
+import { fromKg } from "@/lib/standards/benchmarks";
+import type { Unit } from "@/lib/lifting/plates";
 
 // Editing existing values only — no reordering/add/remove here, that stays
 // in ProgramExerciseForm (add) and the plain exercise list (no delete yet).
@@ -17,6 +19,8 @@ export function ProgramExerciseEditForm({
   percentOfMax,
   isAmrap,
   note,
+  unit,
+  trainingMaxKg,
   action,
   swapAction,
 }: {
@@ -29,6 +33,8 @@ export function ProgramExerciseEditForm({
   percentOfMax: number | null;
   isAmrap: boolean;
   note: string | null;
+  unit: Unit;
+  trainingMaxKg: number | null;
   action: typeof updateProgramExercise;
   swapAction: typeof swapProgramExercise;
 }) {
@@ -36,13 +42,38 @@ export function ProgramExerciseEditForm({
   const [changingExercise, setChangingExercise] = useState(false);
   const setsRepsDisplay = formatSetsReps(sets, reps, isAmrap);
 
+  // Same calculation as the Session page's resolved view — rounded to 1
+  // decimal, no loadable-increment rounding here, since that's only
+  // applied downstream at the actual log-set step.
+  const resolvedWeight =
+    percentOfMax != null && trainingMaxKg != null
+      ? Math.round(fromKg(trainingMaxKg * (percentOfMax / 100), unit) * 10) / 10
+      : null;
+  const tmDisplay = trainingMaxKg != null ? Math.round(fromKg(trainingMaxKg, unit) * 10) / 10 : null;
+
   if (!editing) {
     return (
       <li className="text-sm text-neutral-300">
         <div className="flex items-center justify-between">
           <span>
             {exerciseName} — {setsRepsDisplay}
-            {percentOfMax != null && ` @ ${percentOfMax}%`}
+            {percentOfMax != null &&
+              (resolvedWeight != null && tmDisplay != null ? (
+                <>
+                  {" "}
+                  @ {resolvedWeight}
+                  {unit}{" "}
+                  <span className="text-neutral-500">
+                    ({percentOfMax}% of {tmDisplay}
+                    {unit} TM)
+                  </span>
+                </>
+              ) : (
+                <>
+                  {" "}
+                  @ {percentOfMax}% <span className="text-orange-500">(no TM set)</span>
+                </>
+              ))}
           </span>
           <button
             type="button"
