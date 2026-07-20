@@ -297,6 +297,12 @@ export type Database = {
           rationale: string;
           sets_reps: string;
           sort_order: number;
+          // Added in 0025. category distinguishes an isolation/hypertrophy
+          // prescription from the default compound ones; target_percent is
+          // % of the user's e1RM for the related main lift, null when a
+          // prescription isn't naturally percent-based (e.g. banded work).
+          category: "compound" | "isolation";
+          target_percent: number | null;
         };
         Insert: {
           id?: string;
@@ -305,6 +311,8 @@ export type Database = {
           rationale: string;
           sets_reps: string;
           sort_order?: number;
+          category?: "compound" | "isolation";
+          target_percent?: number | null;
         };
         Update: Partial<Database["public"]["Tables"]["sticking_point_prescriptions"]["Insert"]>;
         Relationships: [];
