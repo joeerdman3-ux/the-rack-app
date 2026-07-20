@@ -153,7 +153,7 @@ export default async function DashboardPage() {
 
     const { data: prescriptionRows } = await supabase
       .from("sticking_point_prescriptions")
-      .select("sticking_point, exercise_id, rationale, sets_reps, sort_order")
+      .select("sticking_point, exercise_id, rationale, sets_reps, sort_order, category, target_percent")
       .in("sticking_point", stickingPoints)
       .order("sort_order", { ascending: true });
 
@@ -172,14 +172,18 @@ export default async function DashboardPage() {
     }
 
     for (const d of needsPrescriptions) {
+      // bests[d.lift] is already in the user's display unit (see
+      // mapPrescriptionRows' comment) — no fromKg/toKg conversion here.
+      const e1rm = bests[d.lift] ?? null;
       if (d.status === "ready") {
         d.prescriptions = mapPrescriptionRows(
           rowsByStickingPoint.get(d.stickingPoint) ?? [],
           exerciseRows ?? [],
+          e1rm,
         );
       } else {
         d.prescriptions = d.stickingPoints.flatMap((sp) =>
-          mapPrescriptionRows(rowsByStickingPoint.get(sp) ?? [], exerciseRows ?? []),
+          mapPrescriptionRows(rowsByStickingPoint.get(sp) ?? [], exerciseRows ?? [], e1rm),
         );
       }
     }

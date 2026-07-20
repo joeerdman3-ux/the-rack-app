@@ -5,10 +5,21 @@
 // src/lib/standards/stickingPoints.ts's mapPrescriptionRows). Nothing in
 // the app imports PRESCRIPTIONS anymore — left in place as a reference/
 // fallback data set, not wired into diagnosis.ts.
+//
+// Intentionally typed narrower than the live ExercisePrescription shape
+// (no category/targetPercent/weight, added in 0025 for the real merge
+// pipeline) — this reference data predates those fields and has no
+// category/percent info to honestly fill in.
 
-import type { ExercisePrescription, StickingPoint } from "./stickingPoints";
+import type { StickingPoint } from "./stickingPoints";
 
-export const PRESCRIPTIONS: Record<StickingPoint, ExercisePrescription[]> = {
+interface ReferencePrescription {
+  exercise: string;
+  rationale: string;
+  setsReps: string;
+}
+
+export const PRESCRIPTIONS: Record<StickingPoint, ReferencePrescription[]> = {
   bench_off_chest: [
     { exercise: 'Spoto Press', rationale: 'Removes chest bounce, forces control in the exact range where the miss happens', setsReps: '4x6-8' },
     { exercise: 'Dead Bench (off pins)', rationale: 'Eliminates stretch reflex, builds raw strength from a dead stop at the sticking point', setsReps: '3x3-5' },

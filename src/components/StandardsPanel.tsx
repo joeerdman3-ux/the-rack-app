@@ -4,6 +4,7 @@ import { isLowConfidence, type Tier } from "@/lib/standards/tables";
 import type { SBDLift } from "@/lib/standards/benchmarks";
 import type { MainLift } from "@/lib/lifting/constants";
 import type { Unit } from "@/lib/lifting/plates";
+import { formatPrescriptionDetail, type ExercisePrescription } from "@/lib/standards/stickingPoints";
 
 const TIER_STYLES: Record<Tier, string> = {
   Untrained: "bg-neutral-800 text-neutral-300",
@@ -29,6 +30,31 @@ function formatPercentileText(estimate: string): string {
 function joinLabels(labels: string[]): string {
   if (labels.length === 2) return `${labels[0]} and ${labels[1]}`;
   return `${labels.slice(0, -1).join(", ")}, and ${labels[labels.length - 1]}`;
+}
+
+// Shared between the "tied" and "ready" prescription lists below. Isolation
+// gets a small badge; compound (the default/expected case) gets none, same
+// convention as the "Weakest lift" badge — only the exceptional case is
+// called out.
+function PrescriptionItem({ p, unit }: { p: ExercisePrescription; unit: Unit }) {
+  const detail = formatPrescriptionDetail(p, unit);
+  return (
+    <>
+      <p className="font-medium text-white">
+        {p.exercise}{" "}
+        {p.category === "isolation" && (
+          <span className="rounded px-1.5 py-0.5 text-[10px] font-semibold bg-blue-950 text-blue-300">
+            Isolation
+          </span>
+        )}{" "}
+        <span className="font-normal text-neutral-500">
+          — {p.setsReps}
+          {detail && ` @ ${detail}`}
+        </span>
+      </p>
+      <p className="text-neutral-400">{p.rationale}</p>
+    </>
+  );
 }
 
 export function StandardsPanel({
@@ -185,10 +211,7 @@ export function StandardsPanel({
               <ul className="space-y-3">
                 {d.prescriptions.map((p, i) => (
                   <li key={`${p.exercise}-${i}`} className="text-sm">
-                    <p className="font-medium text-white">
-                      {p.exercise} <span className="font-normal text-neutral-500">— {p.setsReps}</span>
-                    </p>
-                    <p className="text-neutral-400">{p.rationale}</p>
+                    <PrescriptionItem p={p} unit={unit} />
                   </li>
                 ))}
               </ul>
@@ -225,10 +248,7 @@ export function StandardsPanel({
             <ul className="space-y-3">
               {d.prescriptions.map((p) => (
                 <li key={p.exercise} className="text-sm">
-                  <p className="font-medium text-white">
-                    {p.exercise} <span className="font-normal text-neutral-500">— {p.setsReps}</span>
-                  </p>
-                  <p className="text-neutral-400">{p.rationale}</p>
+                  <PrescriptionItem p={p} unit={unit} />
                 </li>
               ))}
             </ul>
