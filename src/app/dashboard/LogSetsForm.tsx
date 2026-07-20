@@ -3,6 +3,11 @@
 import { useState } from "react";
 import type { Unit } from "@/lib/lifting/plates";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
+import {
+  MuscleGroupRowsFields,
+  EMPTY_MUSCLE_GROUP_ROW,
+  type MuscleGroupRow,
+} from "@/components/MuscleGroupRowsFields";
 import type { logAccessorySet, createExercise } from "./accessoryActions";
 
 // Writes to accessory_logs via exercise_id — same table/shape as the
@@ -24,7 +29,15 @@ export function LogSetsForm({
   const [selected, setSelected] = useState<ExercisePickerOption | null>(null);
   const [addingNew, setAddingNew] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
+  const [muscleGroupRows, setMuscleGroupRows] = useState<MuscleGroupRow[]>([
+    { ...EMPTY_MUSCLE_GROUP_ROW },
+  ]);
   const [creating, setCreating] = useState(false);
+
+  function resetNewExerciseForm() {
+    setNewExerciseName("");
+    setMuscleGroupRows([{ ...EMPTY_MUSCLE_GROUP_ROW }]);
+  }
 
   const [weight, setWeight] = useState("");
   const [reps, setReps] = useState("1");
@@ -46,23 +59,28 @@ export function LogSetsForm({
                   setExercises((prev) => [...prev, result.exercise]);
                   setSelected(result.exercise);
                   setAddingNew(false);
-                  setNewExerciseName("");
+                  resetNewExerciseForm();
                 }
               }}
-              className="space-y-2 rounded-md border border-neutral-800 bg-neutral-950 p-3"
+              className="space-y-3 rounded-md border border-neutral-800 bg-neutral-950 p-3"
             >
-              <label htmlFor="new-exercise-name" className="block text-sm text-neutral-300">
-                New exercise name
-              </label>
-              <input
-                id="new-exercise-name"
-                name="name"
-                type="text"
-                required
-                value={newExerciseName}
-                onChange={(e) => setNewExerciseName(e.target.value)}
-                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
-              />
+              <div>
+                <label htmlFor="new-exercise-name" className="block text-sm text-neutral-300">
+                  New exercise name
+                </label>
+                <input
+                  id="new-exercise-name"
+                  name="name"
+                  type="text"
+                  required
+                  value={newExerciseName}
+                  onChange={(e) => setNewExerciseName(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+                />
+              </div>
+
+              <MuscleGroupRowsFields rows={muscleGroupRows} onChange={setMuscleGroupRows} />
+
               <div className="flex gap-2">
                 <button
                   type="submit"
@@ -75,7 +93,7 @@ export function LogSetsForm({
                   type="button"
                   onClick={() => {
                     setAddingNew(false);
-                    setNewExerciseName("");
+                    resetNewExerciseForm();
                   }}
                   className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-800"
                 >

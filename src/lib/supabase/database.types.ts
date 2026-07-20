@@ -228,8 +228,10 @@ export type Database = {
           movement_pattern: string | null;
           equipment: string | null;
           description: string | null;
-          muscle_group: string | null;
           difficulty: string | null;
+          // null = preset/seeded (locked); a user id = created by (and
+          // only editable by) that user. Added in 0024.
+          created_by: string | null;
         };
         Insert: {
           id?: string;
@@ -238,10 +240,53 @@ export type Database = {
           movement_pattern?: string | null;
           equipment?: string | null;
           description?: string | null;
-          muscle_group?: string | null;
           difficulty?: string | null;
+          created_by?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["exercises"]["Insert"]>;
+        Relationships: [];
+      };
+      // Replaces exercises.muscle_group (dropped in 0022): a many-to-many
+      // model since a compound lift trains multiple muscle groups at
+      // different relative contributions. muscle_group is a literal union
+      // matching 0022's CHECK constraint — see also MUSCLE_GROUPS in
+      // src/lib/lifting/muscleGroups.ts (kept in sync manually).
+      exercise_muscle_groups: {
+        Row: {
+          id: string;
+          exercise_id: string;
+          muscle_group:
+            | "chest"
+            | "back"
+            | "shoulders"
+            | "quads"
+            | "hamstrings"
+            | "glutes"
+            | "biceps"
+            | "triceps"
+            | "calves"
+            | "core"
+            | "forearms";
+          ratio: number;
+        };
+        Insert: {
+          id?: string;
+          exercise_id: string;
+          muscle_group:
+            | "chest"
+            | "back"
+            | "shoulders"
+            | "quads"
+            | "hamstrings"
+            | "glutes"
+            | "biceps"
+            | "triceps"
+            | "calves"
+            | "core"
+            | "forearms";
+          ratio: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["exercise_muscle_groups"]["Insert"]>;
         Relationships: [];
       };
       sticking_point_prescriptions: {

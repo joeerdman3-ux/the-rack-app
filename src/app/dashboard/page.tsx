@@ -13,6 +13,7 @@ import {
   type TiedStickingPointDiagnosis,
 } from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
+import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
 import {
   computeAgeBucket,
   estimatePercentile,
@@ -186,12 +187,33 @@ export default async function DashboardPage() {
 
   // For the Accessory logging picker — unrelated to the main-lift/standards
   // data above.
-  const { data: accessoryExercises } = await supabase
+  const { data: accessoryExercisesRaw } = await supabase
     .from("exercises")
-    .select("id, name, muscle_group, equipment")
+    .select("id, name, equipment")
     .order("name", { ascending: true });
+
+  // exercise_muscle_groups is a separate table (many-to-many, ratio-weighted)
+  // rather than a joined/embedded select — matches this file's existing
+  // Map-based join pattern (see accessoryExerciseNameById just below) rather
+  // than PostgREST's embedded-resource syntax, which nothing else here uses.
+  const { data: muscleGroupRows } = await supabase
+    .from("exercise_muscle_groups")
+    .select("exercise_id, muscle_group, ratio");
+
+  const muscleGroupsByExerciseId = new Map<string, ExerciseMuscleGroup[]>();
+  for (const row of muscleGroupRows ?? []) {
+    const list = muscleGroupsByExerciseId.get(row.exercise_id) ?? [];
+    list.push({ muscle_group: row.muscle_group, ratio: row.ratio });
+    muscleGroupsByExerciseId.set(row.exercise_id, list);
+  }
+
+  const accessoryExercises = (accessoryExercisesRaw ?? []).map((e) => ({
+    ...e,
+    muscle_groups: muscleGroupsByExerciseId.get(e.id) ?? [],
+  }));
+
   const accessoryExerciseNameById = new Map(
-    (accessoryExercises ?? []).map((e) => [e.id, e.name]),
+    accessoryExercises.map((e) => [e.id, e.name]),
   );
 
   // "Today's sets" merges workouts (main lifts) and accessory_logs into one
@@ -315,7 +337,7 @@ export default async function DashboardPage() {
 
         <LoggingSection
           unit={unit}
-          exercises={accessoryExercises ?? []}
+          exercises={accessoryExercises}
           logSetAction={logSet}
           logAccessoryAction={logAccessorySet}
           createExerciseAction={createExercise}

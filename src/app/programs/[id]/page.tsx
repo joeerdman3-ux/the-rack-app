@@ -14,6 +14,7 @@ import {
 import { ProgramExerciseForm } from "./ProgramExerciseForm";
 import { ProgramExerciseEditForm } from "./ProgramExerciseEditForm";
 import { fromKg } from "@/lib/standards/benchmarks";
+import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
 
 interface WeekRow {
   id: string;
@@ -105,10 +106,30 @@ export default async function ProgramPage({
       : { data: [] };
   const exerciseNameById = new Map((exerciseNameRows ?? []).map((e) => [e.id, e.name]));
 
-  const { data: allExercises } = await supabase
+  const { data: allExercisesRaw } = await supabase
     .from("exercises")
-    .select("id, name, muscle_group, equipment")
+    .select("id, name, equipment")
     .order("name", { ascending: true });
+
+  // exercise_muscle_groups is a separate table (many-to-many, ratio-weighted)
+  // rather than a joined/embedded select — matches this codebase's existing
+  // pattern of flat queries + app-side grouping rather than PostgREST's
+  // embedded-resource syntax.
+  const { data: muscleGroupRows } = await supabase
+    .from("exercise_muscle_groups")
+    .select("exercise_id, muscle_group, ratio");
+
+  const muscleGroupsByExerciseId = new Map<string, ExerciseMuscleGroup[]>();
+  for (const row of muscleGroupRows ?? []) {
+    const list = muscleGroupsByExerciseId.get(row.exercise_id) ?? [];
+    list.push({ muscle_group: row.muscle_group, ratio: row.ratio });
+    muscleGroupsByExerciseId.set(row.exercise_id, list);
+  }
+
+  const allExercises = (allExercisesRaw ?? []).map((e) => ({
+    ...e,
+    muscle_groups: muscleGroupsByExerciseId.get(e.id) ?? [],
+  }));
 
   const exerciseIdsNeedingTM = [
     ...new Set(
@@ -311,7 +332,7 @@ export default async function ProgramPage({
                                 id={pe.id}
                                 programId={program.id}
                                 exerciseName={exerciseNameById.get(pe.exercise_id) ?? "Unknown exercise"}
-                                exercises={allExercises ?? []}
+                                exercises={allExercises}
                                 sets={pe.sets}
                                 reps={pe.reps}
                                 percentOfMax={pe.percent_of_max}
