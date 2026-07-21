@@ -244,6 +244,7 @@ export default async function DashboardPage() {
         reps: number;
         rpe: number | null;
         missed: boolean;
+        stalled: boolean;
         e1rm: number;
       }
     | {
@@ -268,6 +269,7 @@ export default async function DashboardPage() {
         reps: set.reps,
         rpe: set.rpe,
         missed: set.missed,
+        stalled: set.stalled,
         e1rm: set.e1rm,
       }),
     ),
@@ -382,6 +384,11 @@ export default async function DashboardPage() {
                         {entry.missed && (
                           <span className="ml-2 rounded bg-red-950 px-1.5 py-0.5 text-xs text-red-300">
                             Missed
+                          </span>
+                        )}
+                        {entry.stalled && (
+                          <span className="ml-2 rounded bg-amber-950 px-1.5 py-0.5 text-xs text-amber-300">
+                            Stalled
                           </span>
                         )}
                       </p>
