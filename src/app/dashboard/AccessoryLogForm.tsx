@@ -154,7 +154,7 @@ export function AccessoryLogForm({
 
             <div>
               <label htmlFor="accessory-rpe" className="mb-1 block text-sm text-neutral-300">
-                RPE
+                RPE <span className="text-neutral-500">(optional)</span>
               </label>
               <input
                 id="accessory-rpe"
@@ -164,6 +164,7 @@ export function AccessoryLogForm({
                 step={0.5}
                 min={1}
                 max={10}
+                placeholder="1-10, how hard it felt"
                 className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
               />
             </div>
