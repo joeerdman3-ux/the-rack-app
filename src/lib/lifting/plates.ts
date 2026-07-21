@@ -56,8 +56,14 @@ export interface PlateResult {
 }
 
 // Greedy largest-first plate selection, assuming unlimited plates of each size.
-export function calculatePlates(totalWeight: number, unit: Unit): PlateResult {
-  const barWeight = BAR_WEIGHT[unit];
+// barWeight defaults to the standard 45lb/20kg bar when omitted, so every
+// existing caller (LogForm via BarbellVisualizer) is unaffected — only the
+// calculator page passes a different bar type through explicitly.
+export function calculatePlates(
+  totalWeight: number,
+  unit: Unit,
+  barWeight: number = BAR_WEIGHT[unit],
+): PlateResult {
   const plateDefs = getPlateDefs(unit);
   let perSideWeight = (totalWeight - barWeight) / 2;
 

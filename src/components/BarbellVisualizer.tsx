@@ -17,8 +17,18 @@ function Plate({ weight, unit }: { weight: number; unit: Unit }) {
   );
 }
 
-export function BarbellVisualizer({ weight, unit }: { weight: number; unit: Unit }) {
-  const { barWeight, perSide, remainder } = calculatePlates(weight, unit);
+export function BarbellVisualizer({
+  weight,
+  unit,
+  barWeight,
+}: {
+  weight: number;
+  unit: Unit;
+  // Omit for the standard 45lb/20kg bar — matches calculatePlates()'s own
+  // default, so LogForm (which never passes this) is unaffected.
+  barWeight?: number;
+}) {
+  const { barWeight: resolvedBarWeight, perSide, remainder } = calculatePlates(weight, unit, barWeight);
   const expanded = perSide.flatMap(({ weight: w, count }) =>
     Array.from({ length: count }, (_, i) => `${w}-${i}`),
   );
@@ -44,7 +54,7 @@ export function BarbellVisualizer({ weight, unit }: { weight: number; unit: Unit
       </div>
 
       <p className="text-center text-sm text-neutral-400">
-        {barWeight}
+        {resolvedBarWeight}
         {unit} bar
         {perSide.length > 0 &&
           ` + ${perSide.map((p) => `${p.count}×${p.weight}`).join(", ")} per side`}
