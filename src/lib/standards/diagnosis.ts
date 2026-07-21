@@ -79,30 +79,48 @@ export interface LaggingRatio {
   connectedDiagnosis: StickingPointDiagnosis | null;
 }
 
-export interface MissedSet {
+// A tagged set is either a true miss (failed rep) or a stalled rep (ground
+// out but completed — missed=false at the DB level, same as any hit).
+// Both carry a sticking_point and feed the same diagnosis pipeline, just at
+// different severity weight (below).
+export interface TaggedSet {
   lift: string;
   sticking_point: string | null;
   logged_date: string;
+  stalled: boolean;
 }
 
-// Below this many missed-and-tagged sets for a lift, the most-common
-// sticking point is too noisy to act on — a single bad rep shouldn't drive
-// a full accessory-work recommendation. Always evaluated against the RAW,
-// unweighted count — recency weighting (below) only ever affects which
-// sticking point wins once a lift has cleared this gate, never whether it
-// clears it, so a user can't regress from "ready" back to "pending" just
-// because time passed.
+// Below this many tagged sets for a lift (by severity-weighted sum — see
+// MISSED/STALLED_SEVERITY_WEIGHT below), the most-common sticking point is too noisy to
+// act on — a single bad rep shouldn't drive a full accessory-work
+// recommendation. Deliberately NOT recency-weighted — recency weighting
+// only ever affects which sticking point wins once a lift has cleared this
+// gate, never whether it clears it, so a user can't regress from "ready"
+// back to "pending" just because time passed.
 export const MIN_MISSED_SETS_FOR_DIAGNOSIS = 3;
 
-// Two-tier recency weighting for sticking-point winner selection: a miss
-// counts fully for RECENCY_CUTOFF_MONTHS, then drops to a reduced (but
+// Two-tier recency weighting for sticking-point winner selection: a tagged
+// set counts fully for RECENCY_CUTOFF_MONTHS, then drops to a reduced (but
 // never zero) weight — old data still counts, it just stops dominating a
 // fresher trend. Two-tier rather than continuous decay specifically so
-// ties stay exact and explainable (only two possible per-miss weights)
+// ties stay exact and explainable (only a few possible per-set weights)
 // instead of floating-point coincidences.
 const RECENCY_CUTOFF_MONTHS = 6;
 const RECENT_MISS_WEIGHT = 1.0;
 const OLDER_MISS_WEIGHT = 0.5;
+
+// Severity axis, orthogonal to recency: a true miss (failed rep) is the
+// clearest possible signal of a sticking point, so it counts fully. A
+// stalled rep (ground out, not failed) still shows the same sticking point
+// but is weaker evidence — the lifter got through it — so it counts at a
+// reduced but still substantial weight. Applied everywhere a set's weight
+// is used: the winner-selection tally uses recencyWeight * severityWeight,
+// and the sample-size gate uses severityWeight alone (see
+// MIN_MISSED_SETS_FOR_DIAGNOSIS above) — a stalled rep counts toward
+// unlocking a diagnosis, just at reduced weight, same as it counts toward
+// winning one.
+const MISSED_SEVERITY_WEIGHT = 1.0;
+const STALLED_SEVERITY_WEIGHT = 0.75;
 
 function isWithinRecencyCutoff(loggedDate: string, cutoff: Date): boolean {
   return new Date(loggedDate) >= cutoff;
@@ -159,7 +177,7 @@ export function diagnose(
   bests: Bests,
   gender: "male" | "female" | null,
   bodyweight: number | null,
-  missedSets: MissedSet[] = [],
+  taggedSets: TaggedSet[] = [],
   unit: "lb" | "kg" = "lb",
   sbdThresholdsKg: Partial<Record<SBDLift, RatioThresholds>> = {},
 ): Diagnosis {
@@ -211,33 +229,34 @@ export function diagnose(
   }
 
   // For EVERY main lift (not just the weakest-tier one(s)) with at least
-  // one tagged miss, find its most commonly reported sticking point.
-  // Below MIN_MISSED_SETS_FOR_DIAGNOSIS total tagged misses for a lift
-  // that DOES have some, a "pending" entry is returned instead of a
+  // one tagged set, find its most commonly reported sticking point.
+  // Below MIN_MISSED_SETS_FOR_DIAGNOSIS severity-weighted "worth" for a
+  // lift that DOES have some, a "pending" entry is returned instead of a
   // prescription — a single bad rep shouldn't drive a full recommendation,
   // but the UI still needs to tell the user how many more they need rather
   // than showing nothing.
   //
-  // Zero-tagged-miss lifts are handled asymmetrically: a weakest-tier lift
+  // Zero-tagged-set lifts are handled asymmetrically: a weakest-tier lift
   // still gets a "pending 0/N" card — that's the nudge that gets a user to
-  // start tagging misses on the lift that matters most, and losing it would
+  // start tagging sets on the lift that matters most, and losing it would
   // regress today's most valuable behavior. A non-weakest lift with zero
-  // tagged misses is skipped entirely (no card) — there's no signal to act
+  // tagged sets is skipped entirely (no card) — there's no signal to act
   // on yet, and showing "0/3" for every lift the user isn't focused on
   // would just be clutter.
   //
   // "Weakest tier" no longer gates whether a lift gets ANALYZED once it has
-  // misses — Bench Press misses are worth surfacing even when Bench isn't
-  // your weakest lift right now. weakestLifts still drives prioritization:
-  // entries are sorted so weakest-tier lifts come first (see the sort
-  // below), and the UI can badge them distinctly.
+  // tagged sets — Bench Press misses are worth surfacing even when Bench
+  // isn't your weakest lift right now. weakestLifts still drives
+  // prioritization: entries are sorted so weakest-tier lifts come first
+  // (see the sort below), and the UI can badge them distinctly.
   //
-  // The winning sticking point (and ties) are picked by recency-weighted
-  // sum, not raw count — see RECENCY_CUTOFF_MONTHS above. The count/
-  // totalTaggedMisses on the returned diagnosis stay RAW (unweighted),
-  // since those are the honest, easy-to-explain numbers shown in the UI
-  // ("4 of 5 missed sets") — weighting is invisible except in which point
-  // it selects.
+  // The winning sticking point (and ties) are picked by combined
+  // recency-weight * severity-weight sum, not raw count — see
+  // RECENCY_CUTOFF_MONTHS and MISSED/STALLED_SEVERITY_WEIGHT above. The
+  // count/totalTaggedMisses on the returned diagnosis stay RAW
+  // (unweighted), since those are the honest, easy-to-explain numbers
+  // shown in the UI ("4 of 5 tagged sets") — weighting is invisible except
+  // in which point it selects.
   //
   // prescriptions is intentionally left empty here: this function stays
   // synchronous/DB-free, so the caller (dashboard/page.tsx) is responsible
@@ -250,35 +269,52 @@ export function diagnose(
   for (const lift of MAIN_LIFTS) {
     const weightedSums = new Map<string, number>();
     const rawCounts = new Map<string, number>();
-    let taggedMisses = 0;
-    for (const set of missedSets) {
+    let taggedCount = 0;
+    // Severity-weighted only (no recency) — this is what the sample-size
+    // gate below is checked against, so time passing can never move a lift
+    // from "ready" back to "pending".
+    let severityWeightedCount = 0;
+    for (const set of taggedSets) {
       if (set.lift !== lift || !set.sticking_point) continue;
-      taggedMisses++;
-      const weight = isWithinRecencyCutoff(set.logged_date, recencyCutoff)
+      taggedCount++;
+      const severityWeight = set.stalled ? STALLED_SEVERITY_WEIGHT : MISSED_SEVERITY_WEIGHT;
+      severityWeightedCount += severityWeight;
+      const recencyWeight = isWithinRecencyCutoff(set.logged_date, recencyCutoff)
         ? RECENT_MISS_WEIGHT
         : OLDER_MISS_WEIGHT;
-      weightedSums.set(set.sticking_point, (weightedSums.get(set.sticking_point) ?? 0) + weight);
+      const combinedWeight = recencyWeight * severityWeight;
+      weightedSums.set(
+        set.sticking_point,
+        (weightedSums.get(set.sticking_point) ?? 0) + combinedWeight,
+      );
       rawCounts.set(set.sticking_point, (rawCounts.get(set.sticking_point) ?? 0) + 1);
     }
 
-    if (taggedMisses === 0 && !weakestLifts.includes(lift)) continue;
+    if (taggedCount === 0 && !weakestLifts.includes(lift)) continue;
 
-    if (taggedMisses < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
+    if (severityWeightedCount < MIN_MISSED_SETS_FOR_DIAGNOSIS) {
       stickingPointDiagnoses.push({
         status: "pending",
         lift,
-        currentCount: taggedMisses,
-        remainingCount: MIN_MISSED_SETS_FOR_DIAGNOSIS - taggedMisses,
+        currentCount: taggedCount,
+        // Derived from the severity-weighted gate (ceil'd to a whole set)
+        // rather than from currentCount directly, so an all-stalled lift
+        // never reads "0 more" while still technically pending — the raw
+        // currentCount can hit the threshold before the weighted sum does.
+        // currentCount itself stays the honest raw count for the "X/Y"
+        // display; the two can diverge by a fraction of a set right at the
+        // boundary.
+        remainingCount: Math.ceil(MIN_MISSED_SETS_FOR_DIAGNOSIS - severityWeightedCount),
         threshold: MIN_MISSED_SETS_FOR_DIAGNOSIS,
       });
       continue;
     }
 
-    // taggedMisses >= MIN_MISSED_SETS_FOR_DIAGNOSIS (> 0) guarantees
-    // weightedSums is non-empty, so topPoints always has at least one
-    // entry here. Only two possible per-miss weights (1.0 or 0.5) means
-    // summed weights land on a small set of exact values, so this === is
-    // a real tie, not a floating-point coincidence.
+    // severityWeightedCount >= MIN_MISSED_SETS_FOR_DIAGNOSIS (> 0)
+    // guarantees weightedSums is non-empty, so topPoints always has at
+    // least one entry here. Combined weight only ever lands on one of a
+    // small fixed set of values (recency 1.0/0.5 times severity 1.0/0.75),
+    // so this === is a real tie, not a floating-point coincidence.
     let topWeight = 0;
     for (const weight of weightedSums.values()) {
       if (weight > topWeight) topWeight = weight;
@@ -295,7 +331,7 @@ export function diagnose(
         labels: topPoints.map((sp) => STICKING_POINT_LABELS[sp]),
         prescriptions: [],
         counts: topPoints.map((sp) => rawCounts.get(sp)!),
-        totalTaggedMisses: taggedMisses,
+        totalTaggedMisses: taggedCount,
       });
     } else {
       const stickingPoint = topPoints[0];
@@ -306,7 +342,7 @@ export function diagnose(
         label: STICKING_POINT_LABELS[stickingPoint],
         prescriptions: [],
         count: rawCounts.get(stickingPoint)!,
-        totalTaggedMisses: taggedMisses,
+        totalTaggedMisses: taggedCount,
       });
     }
   }

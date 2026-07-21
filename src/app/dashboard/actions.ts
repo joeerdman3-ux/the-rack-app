@@ -6,13 +6,13 @@ import { epley1RM } from "@/lib/lifting/e1rm";
 
 export async function logSet(formData: FormData): Promise<
   | { success: true; isNewPR: boolean; lift: string; e1rm: number }
-  | { success: false }
+  | { success: false; error: string }
 > {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return { success: false };
+  if (!user) return { success: false, error: "You must be signed in to log a set." };
 
   const lift = formData.get("lift") as string;
   const weight = parseFloat(formData.get("weight") as string);
@@ -20,11 +20,12 @@ export async function logSet(formData: FormData): Promise<
   const rpeRaw = formData.get("rpe") as string;
   const rpe = rpeRaw ? parseFloat(rpeRaw) : null;
   const missed = formData.get("missed") === "on";
+  const stalled = formData.get("stalled") === "on";
   const stickingPointRaw = formData.get("sticking_point") as string;
-  const stickingPoint = missed && stickingPointRaw ? stickingPointRaw : null;
+  const stickingPoint = (missed || stalled) && stickingPointRaw ? stickingPointRaw : null;
 
   if (!lift || !Number.isFinite(weight) || weight <= 0 || !Number.isInteger(reps) || reps < 1) {
-    return { success: false };
+    return { success: false, error: "Enter a valid lift, weight, and reps." };
   }
 
   const e1rm = epley1RM(weight, reps);
@@ -55,13 +56,17 @@ export async function logSet(formData: FormData): Promise<
       rpe,
       e1rm,
       missed,
+      stalled,
       sticking_point: stickingPoint,
       logged_date: loggedDate,
     })
     .select("id")
     .single();
 
-  if (error || !newWorkout) return { success: false };
+  if (error || !newWorkout) {
+    console.error("[logSet] workouts insert failed:", error);
+    return { success: false, error: error?.message ?? "Failed to save set." };
+  }
 
   const isNewPR = !missed && (priorBestE1rm === null || e1rm > priorBestE1rm);
   if (isNewPR) {

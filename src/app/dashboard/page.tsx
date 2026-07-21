@@ -11,6 +11,7 @@ import {
   type Bests,
   type StickingPointDiagnosis,
   type TiedStickingPointDiagnosis,
+  type TaggedSet,
 } from "@/lib/standards/diagnosis";
 import { MAIN_LIFTS, type MainLift } from "@/lib/lifting/constants";
 import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
@@ -85,11 +86,18 @@ export default async function DashboardPage() {
     }
   }
 
-  const { data: missedSets } = await supabase
+  // Feeds diagnose(): both true misses and stalled (ground-out) reps carry
+  // a sticking point and count toward a diagnosis, just at different
+  // severity weight there. The `not (missed and stalled)` check constraint
+  // guarantees every row this .or() returns is missed XOR stalled, so
+  // `stalled` alone is enough to tell diagnose() which — no need to also
+  // select `missed`.
+  const { data: taggedRows } = await supabase
     .from("workouts")
-    .select("lift, sticking_point, logged_date")
+    .select("lift, sticking_point, logged_date, stalled")
     .eq("user_id", user.id)
-    .eq("missed", true);
+    .or("missed.eq.true,stalled.eq.true");
+  const taggedSets: TaggedSet[] = taggedRows ?? [];
 
   const gender = profile?.gender ?? null;
   const bodyweight = profile?.bodyweight ?? null;
@@ -129,7 +137,7 @@ export default async function DashboardPage() {
     bests,
     gender,
     bodyweight,
-    missedSets ?? [],
+    taggedSets,
     unit,
     sbdThresholdsKg,
   );
@@ -236,6 +244,7 @@ export default async function DashboardPage() {
         reps: number;
         rpe: number | null;
         missed: boolean;
+        stalled: boolean;
         e1rm: number;
       }
     | {
@@ -260,6 +269,7 @@ export default async function DashboardPage() {
         reps: set.reps,
         rpe: set.rpe,
         missed: set.missed,
+        stalled: set.stalled,
         e1rm: set.e1rm,
       }),
     ),
@@ -374,6 +384,11 @@ export default async function DashboardPage() {
                         {entry.missed && (
                           <span className="ml-2 rounded bg-red-950 px-1.5 py-0.5 text-xs text-red-300">
                             Missed
+                          </span>
+                        )}
+                        {entry.stalled && (
+                          <span className="ml-2 rounded bg-amber-950 px-1.5 py-0.5 text-xs text-amber-300">
+                            Stalled
                           </span>
                         )}
                       </p>
