@@ -122,9 +122,8 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
               step={0.5}
               min={1}
               max={10}
-              disabled={missed}
-              placeholder="1-10, how hard it felt"
-              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500 disabled:cursor-not-allowed disabled:opacity-60"
+              placeholder={missed ? "1-10, how hard you fought it" : "1-10, how hard it felt"}
+              className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
             />
           </div>
         </div>
