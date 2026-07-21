@@ -187,9 +187,9 @@ export function StandardsPanel({
             <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
               {heading}
               <p className="text-sm text-neutral-400">
-                Log {d.remainingCount} more missed {d.lift} set{d.remainingCount === 1 ? "" : "s"}{" "}
-                with a sticking point tagged to unlock your diagnosis ({d.currentCount}/{d.threshold}
-                ).
+                Log {d.remainingCount} more missed or stalled {d.lift} set
+                {d.remainingCount === 1 ? "" : "s"} with a sticking point tagged to unlock your
+                diagnosis ({d.currentCount}/{d.threshold}).
               </p>
             </div>
           );
@@ -234,14 +234,14 @@ export function StandardsPanel({
                   sticking point on {d.lift}
                   {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
                   <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
-                  {" "}missed sets, {percent}%)
+                  {" "}tagged sets, {percent}%)
                 </>
               ) : (
                 <>
                   Most-reported sticking point on {d.lift}
                   {isLowConfidence(d.lift) && " (based on limited data)"}:{" "}
                   <span className="text-neutral-300">{d.label}</span> ({d.count} of {d.totalTaggedMisses}
-                  {" "}missed sets, {percent}%)
+                  {" "}tagged sets, {percent}%)
                 </>
               )}
             </p>
