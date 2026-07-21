@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import type { Unit } from "@/lib/lifting/plates";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
 import {
@@ -25,8 +26,17 @@ export function LogSetsForm({
   action: typeof logAccessorySet;
   createExerciseAction: typeof createExercise;
 }) {
+  // ?logExerciseId= (Exercise Library's "Log this" link) pre-selects an
+  // exercise on mount, skipping the search step entirely — same lazy-
+  // useState pre-fill pattern AccessoryLogForm already uses for its own
+  // ?exerciseId= param.
+  const searchParams = useSearchParams();
+  const prefillExerciseId = searchParams.get("logExerciseId");
+
   const [exercises, setExercises] = useState(initialExercises);
-  const [selected, setSelected] = useState<ExercisePickerOption | null>(null);
+  const [selected, setSelected] = useState<ExercisePickerOption | null>(
+    prefillExerciseId ? (initialExercises.find((e) => e.id === prefillExerciseId) ?? null) : null,
+  );
   const [addingNew, setAddingNew] = useState(false);
   const [newExerciseName, setNewExerciseName] = useState("");
   const [muscleGroupRows, setMuscleGroupRows] = useState<MuscleGroupRow[]>([

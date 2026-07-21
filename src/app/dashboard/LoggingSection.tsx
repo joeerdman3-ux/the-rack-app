@@ -25,8 +25,17 @@ export function LoggingSection({
   // A "Log this set" link from Today's Session carries ?exerciseId= for
   // accessory-routed exercises — open straight into the Accessory tab.
   const searchParams = useSearchParams();
+  // ?logExerciseId= (Exercise Library's "Log this" link) opens straight
+  // into the Log Sets tab pre-selected — deliberately a separate param
+  // from ?exerciseId=, which already means "open Accessory tab
+  // pre-filled" for Today's Session's links, so the two routes can't
+  // collide.
   const [mode, setMode] = useState<"main" | "accessory" | "logSets">(
-    searchParams.get("exerciseId") ? "accessory" : "main",
+    searchParams.get("logExerciseId")
+      ? "logSets"
+      : searchParams.get("exerciseId")
+        ? "accessory"
+        : "main",
   );
 
   return (
