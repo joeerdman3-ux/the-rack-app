@@ -312,6 +312,12 @@ export default async function DashboardPage() {
               Calculator
             </Link>
             <Link
+              href="/rpe-calculator"
+              className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
+            >
+              RPE Calculator
+            </Link>
+            <Link
               href="/leaderboards"
               className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
             >
