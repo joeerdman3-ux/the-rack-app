@@ -32,6 +32,7 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
   const [missed, setMissed] = useState(false);
   const [stalled, setStalled] = useState(false);
   const [newPR, setNewPR] = useState<{ lift: string; e1rm: number } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const numericWeight = parseFloat(weight) || 0;
   const weightStep = unit === "kg" ? 2.5 : 5;
 
@@ -46,10 +47,17 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
         </div>
       )}
 
+      {error && (
+        <div className="rounded-md border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
+          Couldn&apos;t save that set: {error}
+        </div>
+      )}
+
       <form
         action={async (formData) => {
           const result = await action(formData);
           setNewPR(result.success && result.isNewPR ? { lift: result.lift, e1rm: result.e1rm } : null);
+          setError(result.success ? null : result.error);
         }}
         className="space-y-4"
       >
