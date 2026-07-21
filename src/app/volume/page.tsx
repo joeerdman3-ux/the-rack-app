@@ -2,8 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { MAIN_LIFTS } from "@/lib/lifting/constants";
-import { computeMuscleGroupVolume } from "@/lib/history/muscleGroupVolume";
+import { computeMuscleGroupVolume, bucketMuscleGroupVolume } from "@/lib/history/muscleGroupVolume";
 import { MuscleGroupHeatmap } from "@/components/MuscleGroupHeatmap";
+import { BodyMapVolume } from "@/components/BodyMapVolume";
+import { toBodyHighlighterData } from "@/lib/lifting/bodyMapRegions";
 import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
 
 const WINDOW_DAYS = 7;
@@ -64,6 +66,7 @@ export default async function VolumePage() {
     exerciseIdByLiftName,
     muscleGroupsByExerciseId,
   );
+  const bodyMapData = toBodyHighlighterData(bucketMuscleGroupVolume(volumes));
 
   return (
     <div className="min-h-screen bg-neutral-950 px-4 py-10">
@@ -82,6 +85,22 @@ export default async function VolumePage() {
             without muscle groups assigned yet aren&apos;t counted.
           </p>
           <MuscleGroupHeatmap volumes={volumes} />
+        </div>
+
+        <div className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900 p-6">
+          <h2 className="mb-1 text-lg font-semibold text-white">Body map</h2>
+          <p className="mb-4 text-sm text-neutral-500">
+            Same last-7-days volume, shown as an anatomical highlight — darker means more relative
+            volume.
+          </p>
+          {bodyMapData.length === 0 ? (
+            <p className="text-sm text-neutral-500">
+              No sets logged in the last 7 days yet — log some workouts or accessory sets to see
+              your body map.
+            </p>
+          ) : (
+            <BodyMapVolume data={bodyMapData} />
+          )}
         </div>
       </div>
     </div>

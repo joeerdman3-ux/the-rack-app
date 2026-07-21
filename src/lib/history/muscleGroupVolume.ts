@@ -58,3 +58,30 @@ export function computeMuscleGroupVolume(
     (a, b) => b.sets - a.sets,
   );
 }
+
+export interface MuscleGroupTier {
+  muscleGroup: MuscleGroup;
+  // 0 means "no volume this window" — the caller should omit it from
+  // whatever it's rendering rather than treat it as tier 1.
+  tier: number;
+}
+
+// Matches react-body-highlighter's <Model> frequency prop: an integer
+// index into a fixed-length color array, so this can't be a continuous
+// 0-1 value — it has to land on a whole number 1-6.
+export const BODY_MAP_TIERS = 6;
+
+// Buckets each group's continuous weighted-sum volume into a 1-6 tier,
+// relative to the SAME maxSets denominator MuscleGroupHeatmap.tsx already
+// uses for its bar-width percentage (Math.max across all groups in the
+// window) — not a per-group historical max, so the two visualizations of
+// the same data stay proportionally consistent with each other.
+export function bucketMuscleGroupVolume(volumes: MuscleGroupVolume[]): MuscleGroupTier[] {
+  const maxSets = Math.max(...volumes.map((v) => v.sets), 0);
+  return volumes.map(({ muscleGroup, sets }) => {
+    if (maxSets === 0 || sets === 0) return { muscleGroup, tier: 0 };
+    const pct = sets / maxSets;
+    const tier = Math.min(BODY_MAP_TIERS, Math.max(1, Math.ceil(pct * BODY_MAP_TIERS)));
+    return { muscleGroup, tier };
+  });
+}
