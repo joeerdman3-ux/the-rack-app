@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   MUSCLE_GROUP_LABELS,
@@ -275,15 +276,23 @@ export function ExerciseLibrary({
                     {[muscleGroupText, exercise.equipment].filter(Boolean).join(" · ")}
                   </p>
                 )}
-                {exercise.created_by === currentUserId && (
-                  <button
-                    type="button"
-                    onClick={() => startEditing(exercise)}
-                    className="mt-2 text-xs text-orange-500 hover:underline"
+                <div className="mt-2 flex items-center gap-3">
+                  <Link
+                    href={`/dashboard?logExerciseId=${exercise.id}`}
+                    className="text-xs text-orange-500 hover:underline"
                   >
-                    Edit
-                  </button>
-                )}
+                    Log this
+                  </Link>
+                  {exercise.created_by === currentUserId && (
+                    <button
+                      type="button"
+                      onClick={() => startEditing(exercise)}
+                      className="text-xs text-orange-500 hover:underline"
+                    >
+                      Edit
+                    </button>
+                  )}
+                </div>
               </li>
             );
           })}
