@@ -373,6 +373,8 @@ export default async function DashboardPage() {
           logSetAction={logSet}
           logAccessoryAction={logAccessorySet}
           createExerciseAction={createExercise}
+          mainRestSeconds={profile?.main_rest_seconds ?? 180}
+          accessoryRestSeconds={profile?.accessory_rest_seconds ?? 90}
         />
 
         <section className="mt-8">

@@ -25,10 +25,12 @@ export function AccessoryLogForm({
   unit,
   exercises,
   action,
+  onLogged,
 }: {
   unit: Unit;
   exercises: AccessoryExerciseOption[];
   action: typeof logAccessorySet;
+  onLogged?: () => void;
 }) {
   const searchParams = useSearchParams();
   const prefillExerciseId = searchParams.get("exerciseId");
@@ -97,7 +99,8 @@ export function AccessoryLogForm({
       ) : (
         <form
           action={async (formData) => {
-            await action(formData);
+            const result = await action(formData);
+            if (result.success) onLogged?.();
           }}
           className="space-y-4"
         >

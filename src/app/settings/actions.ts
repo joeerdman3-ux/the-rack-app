@@ -19,6 +19,11 @@ export async function updateProfile(formData: FormData) {
   const unit = (formData.get("unit") as string) === "kg" ? "kg" : "lb";
   const birthdate = (formData.get("birthdate") as string) || null;
 
+  const mainRestRaw = formData.get("main_rest_seconds") as string;
+  const mainRestSeconds = mainRestRaw ? parseInt(mainRestRaw, 10) : NaN;
+  const accessoryRestRaw = formData.get("accessory_rest_seconds") as string;
+  const accessoryRestSeconds = accessoryRestRaw ? parseInt(accessoryRestRaw, 10) : NaN;
+
   await supabase
     .from("profiles")
     .update({
@@ -27,6 +32,13 @@ export async function updateProfile(formData: FormData) {
       gender: gender === "male" || gender === "female" ? gender : null,
       birthdate,
       unit,
+      // Falls back to the column's own DB default (180/90) rather than a
+      // hardcoded literal here, so there's one source of truth for the
+      // default — matches the check constraint's floor of > 0.
+      ...(Number.isInteger(mainRestSeconds) && mainRestSeconds > 0 ? { main_rest_seconds: mainRestSeconds } : {}),
+      ...(Number.isInteger(accessoryRestSeconds) && accessoryRestSeconds > 0
+        ? { accessory_rest_seconds: accessoryRestSeconds }
+        : {}),
     })
     .eq("id", user.id);
 

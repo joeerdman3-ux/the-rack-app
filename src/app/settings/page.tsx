@@ -124,6 +124,45 @@ export default async function SettingsPage() {
             </p>
           </div>
 
+          <div className="border-t border-neutral-800 pt-4">
+            <p className="mb-3 text-sm text-neutral-400">
+              How long the rest timer counts down after logging a set — starts automatically, can
+              still be adjusted or dismissed in the moment.
+            </p>
+
+            <div>
+              <label htmlFor="main_rest_seconds" className="mb-1 block text-sm text-neutral-300">
+                Main lift rest (seconds)
+              </label>
+              <input
+                id="main_rest_seconds"
+                name="main_rest_seconds"
+                type="number"
+                inputMode="numeric"
+                step={15}
+                min={15}
+                defaultValue={profile?.main_rest_seconds ?? 180}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <div className="mt-3">
+              <label htmlFor="accessory_rest_seconds" className="mb-1 block text-sm text-neutral-300">
+                Accessory / Log Sets rest (seconds)
+              </label>
+              <input
+                id="accessory_rest_seconds"
+                name="accessory_rest_seconds"
+                type="number"
+                inputMode="numeric"
+                step={15}
+                min={15}
+                defaultValue={profile?.accessory_rest_seconds ?? 90}
+                className="w-full rounded-md border border-neutral-700 bg-neutral-900 px-3 py-2 text-white outline-none focus:border-orange-500"
+              />
+            </div>
+          </div>
+
           <button
             type="submit"
             className="w-full rounded-md bg-orange-600 px-3 py-2 font-semibold text-white hover:bg-orange-500"

@@ -13,12 +13,12 @@ import { MUSCLE_GROUPS, type ExerciseMuscleGroup, type MuscleGroup } from "@/lib
 // submission (defaults to 1, matching every prior caller that never sent
 // it) — it inserts `sets` separate rows in one batch, so every row still
 // represents exactly one set, same as before. No new column/data shape.
-export async function logAccessorySet(formData: FormData) {
+export async function logAccessorySet(formData: FormData): Promise<{ success: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return;
+  if (!user) return { success: false };
 
   const exerciseId = formData.get("exercise_id") as string;
   const weight = parseFloat(formData.get("weight") as string);
@@ -39,7 +39,7 @@ export async function logAccessorySet(formData: FormData) {
     !Number.isInteger(sets) ||
     sets < 1
   ) {
-    return;
+    return { success: false };
   }
 
   const loggedDate = new Date().toISOString().slice(0, 10);
@@ -54,10 +54,15 @@ export async function logAccessorySet(formData: FormData) {
     logged_date: loggedDate,
   }));
 
-  await supabase.from("accessory_logs").insert(rows);
+  const { error } = await supabase.from("accessory_logs").insert(rows);
+  if (error) {
+    console.error("[logAccessorySet] insert failed:", error);
+    return { success: false };
+  }
 
   revalidatePath("/dashboard");
   revalidatePath("/history");
+  return { success: true };
 }
 
 // Inline "+ Add new exercise" from the Log Sets flow — a lightweight

@@ -45,6 +45,8 @@ export type Database = {
           instagram: string | null;
           simple_mode: boolean;
           leaderboard_opt_in: boolean;
+          main_rest_seconds: number;
+          accessory_rest_seconds: number;
           created_at: string;
         };
         Insert: {
@@ -59,6 +61,8 @@ export type Database = {
           instagram?: string | null;
           simple_mode?: boolean;
           leaderboard_opt_in?: boolean;
+          main_rest_seconds?: number;
+          accessory_rest_seconds?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["profiles"]["Insert"]>;

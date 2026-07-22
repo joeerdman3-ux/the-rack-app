@@ -20,11 +20,13 @@ export function LogSetsForm({
   exercises: initialExercises,
   action,
   createExerciseAction,
+  onLogged,
 }: {
   unit: Unit;
   exercises: ExercisePickerOption[];
   action: typeof logAccessorySet;
   createExerciseAction: typeof createExercise;
+  onLogged?: () => void;
 }) {
   // ?logExerciseId= (Exercise Library's "Log this" link) pre-selects an
   // exercise on mount, skipping the search step entirely — same lazy-
@@ -124,7 +126,8 @@ export function LogSetsForm({
       ) : (
         <form
           action={async (formData) => {
-            await action(formData);
+            const result = await action(formData);
+            if (result.success) onLogged?.();
           }}
           className="space-y-4"
         >

@@ -19,7 +19,15 @@ function isMainLift(value: string | null): value is MainLift {
 // ?repsTarget= is a variant of ?reps= used for an AMRAP set: instead of
 // pre-filling a rep count that would be silently logged if untouched, the
 // reps field starts empty with a "target: N+" placeholder.
-export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet }) {
+export function LogForm({
+  unit,
+  action,
+  onLogged,
+}: {
+  unit: Unit;
+  action: typeof logSet;
+  onLogged?: () => void;
+}) {
   const searchParams = useSearchParams();
   const prefillLift = searchParams.get("lift");
   const prefillWeight = searchParams.get("weight");
@@ -58,6 +66,7 @@ export function LogForm({ unit, action }: { unit: Unit; action: typeof logSet })
           const result = await action(formData);
           setNewPR(result.success && result.isNewPR ? { lift: result.lift, e1rm: result.e1rm } : null);
           setError(result.success ? null : result.error);
+          if (result.success) onLogged?.();
         }}
         className="space-y-4"
       >
