@@ -1,4 +1,4 @@
-import { calculatePlates, getPlateDefs, type Unit } from "@/lib/lifting/plates";
+import { calculatePlates, formatPlateSummary, getPlateDefs, type Unit } from "@/lib/lifting/plates";
 
 function Plate({ weight, unit }: { weight: number; unit: Unit }) {
   const def = getPlateDefs(unit).find((d) => d.weight === weight);
@@ -28,7 +28,8 @@ export function BarbellVisualizer({
   // default, so LogForm (which never passes this) is unaffected.
   barWeight?: number;
 }) {
-  const { barWeight: resolvedBarWeight, perSide, remainder } = calculatePlates(weight, unit, barWeight);
+  const plateResult = calculatePlates(weight, unit, barWeight);
+  const { perSide } = plateResult;
   const expanded = perSide.flatMap(({ weight: w, count }) =>
     Array.from({ length: count }, (_, i) => `${w}-${i}`),
   );
@@ -53,13 +54,7 @@ export function BarbellVisualizer({
         </div>
       </div>
 
-      <p className="text-center text-sm text-neutral-400">
-        {resolvedBarWeight}
-        {unit} bar
-        {perSide.length > 0 &&
-          ` + ${perSide.map((p) => `${p.count}×${p.weight}`).join(", ")} per side`}
-        {remainder > 0.05 && ` (+${remainder.toFixed(1)}${unit} not loadable)`}
-      </p>
+      <p className="text-center text-sm text-neutral-400">{formatPlateSummary(plateResult, unit)}</p>
     </div>
   );
 }

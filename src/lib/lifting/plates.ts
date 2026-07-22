@@ -85,3 +85,18 @@ export function calculatePlates(
 
   return { barWeight, perSide, remainder: Math.max(perSideWeight, 0) };
 }
+
+// Shared text summary of a PlateResult — "45lb bar + 1x35, 1x5 per side"
+// style — used as BarbellVisualizer's caption and reused verbatim
+// wherever else a plate breakdown needs to render as plain text instead
+// of the full visual graphic (e.g. the warm-up calculator's compact list).
+export function formatPlateSummary(plates: PlateResult, unit: Unit): string {
+  let summary = `${plates.barWeight}${unit} bar`;
+  if (plates.perSide.length > 0) {
+    summary += ` + ${plates.perSide.map((p) => `${p.count}×${p.weight}`).join(", ")} per side`;
+  }
+  if (plates.remainder > 0.05) {
+    summary += ` (+${plates.remainder.toFixed(1)}${unit} not loadable)`;
+  }
+  return summary;
+}

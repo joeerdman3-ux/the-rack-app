@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { BarbellVisualizer } from "@/components/BarbellVisualizer";
-import type { Unit } from "@/lib/lifting/plates";
+import { formatPlateSummary, type Unit } from "@/lib/lifting/plates";
 import {
   BAR_TYPES,
   DEFAULT_BAR_TYPE_ID,
@@ -34,6 +34,11 @@ export function WarmupCalculatorForm({ initialUnit }: { initialUnit: Unit }) {
     CUSTOM_BAR_WEIGHT_STORAGE_KEY,
     String(BAR_TYPES[0].weights[initialUnit] ?? 45),
   );
+
+  // Which step's full plate graphic is expanded, if any — only one at a
+  // time, so the page stays a compact scannable list instead of 6-8
+  // stacked BarbellVisualizers rendered all at once.
+  const [expandedLabel, setExpandedLabel] = useState<string | null>(null);
 
   const numericWeight = parseFloat(weight) || 0;
   const numericCustomBarWeight = parseFloat(customBarWeight) || 0;
@@ -117,22 +122,39 @@ export function WarmupCalculatorForm({ initialUnit }: { initialUnit: Unit }) {
       </div>
 
       {steps.length > 0 && (
-        <div className="space-y-4">
-          {steps.map((step) => (
-            <div
-              key={step.label}
-              className="rounded-lg border border-neutral-800 bg-neutral-900 p-4"
-            >
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="font-semibold text-white">{step.label}</span>
-                <span className="text-neutral-400">
-                  {step.weight}
-                  {unit} × {step.reps}
-                </span>
+        <div className="space-y-2">
+          {steps.map((step) => {
+            const expanded = expandedLabel === step.label;
+            return (
+              <div key={step.label}>
+                <button
+                  type="button"
+                  onClick={() => setExpandedLabel(expanded ? null : step.label)}
+                  className={`w-full rounded-lg border px-4 py-3 text-left ${
+                    expanded
+                      ? "border-orange-500 bg-neutral-900"
+                      : "border-neutral-800 bg-neutral-900 hover:border-neutral-700"
+                  }`}
+                >
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="font-semibold text-white">
+                      {step.kind === "bar" ? "Bar" : `${step.weight}${unit}`} × {step.reps}
+                    </span>
+                    <span className="text-xs text-neutral-500">{step.label}</span>
+                  </div>
+                  <p className="mt-1 text-xs text-neutral-500">
+                    {formatPlateSummary(step.plates, unit)}
+                  </p>
+                </button>
+
+                {expanded && (
+                  <div className="mt-2 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+                    <BarbellVisualizer weight={step.weight} unit={unit} barWeight={barWeight} />
+                  </div>
+                )}
               </div>
-              <BarbellVisualizer weight={step.weight} unit={unit} barWeight={barWeight} />
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>
