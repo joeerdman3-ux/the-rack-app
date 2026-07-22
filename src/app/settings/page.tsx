@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { updateProfile, joinPremiumWaitlist } from "./actions";
+import { updateProfile, joinPremiumWaitlist, exportTrainingData } from "./actions";
 import { PremiumWaitlistCard } from "./PremiumWaitlistCard";
+import { ExportDataButton } from "./ExportDataButton";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -170,6 +171,14 @@ export default async function SettingsPage() {
             Save
           </button>
         </form>
+
+        <div className="mt-8 border-t border-neutral-800 pt-4">
+          <h2 className="mb-2 text-sm font-semibold text-white">Your data</h2>
+          <p className="mb-3 text-xs text-neutral-500">
+            Download every set you&apos;ve logged (main lifts and accessory work) as a CSV.
+          </p>
+          <ExportDataButton action={exportTrainingData} />
+        </div>
 
         <div className="mt-8">
           <PremiumWaitlistCard alreadyJoined={alreadyOnWaitlist} action={joinPremiumWaitlist} />
