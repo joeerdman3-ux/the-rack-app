@@ -6,19 +6,20 @@ import type { joinPremiumWaitlist } from "./actions";
 const FEATURES = [
   {
     title: "Trend tracking",
-    detail: "see how your sticking points evolve over time, not just your current snapshot",
+    detail:
+      "see how your sticking points evolve over time, and whether your prescribed fixes are actually working",
   },
   {
-    title: "Cross-lift correlation",
-    detail: "understand how a weakness in one lift is likely affecting another",
+    title: "Deeper cross-lift correlation",
+    detail: "the quantified relationship between your lifts' weaknesses, and how it's trending",
+  },
+  {
+    title: "Program customization",
+    detail: "your template automatically adjusted around your diagnosed weak points",
   },
   {
     title: "Expanded prescriptions",
-    detail: "more accessory options and alternate variations, not just two picks",
-  },
-  {
-    title: "Advanced analytics",
-    detail: "volume, fatigue, and recovery scoring",
+    detail: "ranked alternatives and specific sets/reps/intensity targets, not just an exercise name",
   },
 ];
 
