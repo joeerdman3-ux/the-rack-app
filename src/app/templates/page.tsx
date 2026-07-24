@@ -34,6 +34,13 @@ export default async function TemplatesPage() {
           </Link>
         </div>
 
+        <Link
+          href="/templates/quiz"
+          className="mb-6 block text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-2 hover:text-neutral-300 hover:decoration-neutral-500 active:text-neutral-200"
+        >
+          Not sure which to pick? Take the quiz →
+        </Link>
+
         {templates.length === 0 ? (
           <p className="text-sm text-neutral-500">No templates available yet.</p>
         ) : (
