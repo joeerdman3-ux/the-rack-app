@@ -2,12 +2,14 @@ export type Experience = "new" | "intermediate" | "competitive";
 export type DaysPerWeek = "low" | "moderate" | "high";
 export type Goal = "base" | "peak" | "general";
 export type Complexity = "simple" | "complex";
+export type EquipmentAccess = "yes" | "no";
 
 export interface QuizAnswers {
   experience: Experience;
   daysPerWeek: DaysPerWeek;
   goal: Goal;
   complexity: Complexity;
+  equipmentAccess: EquipmentAccess;
 }
 
 export interface QuizRecommendation {
@@ -37,11 +39,11 @@ const RULES: ((a: QuizAnswers) => QuizRecommendation | null)[] = [
         }
       : null,
   (a) =>
-    a.complexity === "complex" && a.experience === "competitive"
+    a.complexity === "complex" && a.experience === "competitive" && a.equipmentAccess === "yes"
       ? {
           templateName: "Conjugate",
           reason:
-            "The max-effort/dynamic-effort split rewards lifters with enough experience to manage that complexity.",
+            "The max-effort/dynamic-effort split rewards lifters with enough experience to manage that complexity — and you've got the specialty equipment it actually requires.",
         }
       : null,
   (a) =>

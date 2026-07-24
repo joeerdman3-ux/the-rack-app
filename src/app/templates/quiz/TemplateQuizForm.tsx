@@ -7,6 +7,7 @@ import {
   recommendTemplate,
   type Complexity,
   type DaysPerWeek,
+  type EquipmentAccess,
   type Experience,
   type Goal,
   type QuizAnswers,
@@ -68,6 +69,16 @@ const COMPLEXITY_QUESTION: Question<Complexity> = {
   ],
 };
 
+const EQUIPMENT_QUESTION: Question<EquipmentAccess> = {
+  key: "equipmentAccess",
+  prompt:
+    "Do you have access to specialty equipment (safety squat bar, bands/chains, floor press setup)?",
+  options: [
+    { value: "yes", label: "Yes, my gym/setup has this" },
+    { value: "no", label: "No, just a standard barbell + rack" },
+  ],
+};
+
 type PartialAnswers = Partial<QuizAnswers>;
 
 function QuestionFieldset<T extends string>({
@@ -117,7 +128,8 @@ export function TemplateQuizForm({
     answers.experience != null &&
     answers.daysPerWeek != null &&
     answers.goal != null &&
-    answers.complexity != null;
+    answers.complexity != null &&
+    answers.equipmentAccess != null;
 
   if (submitted && isComplete) {
     const recommendation = recommendTemplate(answers as QuizAnswers);
@@ -184,6 +196,11 @@ export function TemplateQuizForm({
         question={COMPLEXITY_QUESTION}
         value={answers.complexity}
         onChange={(value) => setAnswers((prev) => ({ ...prev, complexity: value }))}
+      />
+      <QuestionFieldset
+        question={EQUIPMENT_QUESTION}
+        value={answers.equipmentAccess}
+        onChange={(value) => setAnswers((prev) => ({ ...prev, equipmentAccess: value }))}
       />
 
       <button
