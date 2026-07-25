@@ -126,6 +126,28 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["personal_records"]["Insert"]>;
         Relationships: [];
       };
+      diagnosis_snapshots: {
+        Row: {
+          id: string;
+          user_id: string;
+          lift: string;
+          sticking_point: string;
+          confidence: number;
+          snapshot_date: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          lift: string;
+          sticking_point: string;
+          confidence: number;
+          snapshot_date?: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["diagnosis_snapshots"]["Insert"]>;
+        Relationships: [];
+      };
       premium_waitlist: {
         Row: {
           id: string;

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { epley1RM } from "@/lib/lifting/e1rm";
+import { diagnose, type TaggedSet } from "@/lib/standards/diagnosis";
 
 export async function logSet(formData: FormData): Promise<
   | { success: true; isNewPR: boolean; lift: string; e1rm: number }
@@ -80,6 +81,40 @@ export async function logSet(formData: FormData): Promise<
     });
     if (prError) {
       console.error("[logSet] personal_records insert failed:", prError);
+    }
+  }
+
+  // Trend tracking (v1): every qualifying tagged set re-runs the SAME
+  // diagnose() this lift's dashboard card uses, scoped to just this lift,
+  // and records a snapshot only when that recomputation lands on "ready"
+  // (a single confident sticking point) — "pending" has no confident
+  // answer yet, and "tied" has no single winner to record. bests/gender/
+  // bodyweight/sbdThresholdsKg are passed as benign stand-ins ({}, null,
+  // null, {}) rather than re-fetched: diagnose()'s standings/weakestLifts
+  // (which those arguments feed) only affect the zero-tagged-set edge
+  // case, which can't apply here since this lift now has >=1 tagged set.
+  if ((missed || stalled) && stickingPoint) {
+    const { data: taggedRows } = await supabase
+      .from("workouts")
+      .select("lift, sticking_point, logged_date, stalled")
+      .eq("user_id", user.id)
+      .eq("lift", lift)
+      .or("missed.eq.true,stalled.eq.true");
+    const taggedSets: TaggedSet[] = taggedRows ?? [];
+
+    const diagnosis = diagnose({}, null, null, taggedSets, "lb", {});
+    const liftDiagnosis = diagnosis.stickingPointDiagnoses.find((d) => d.lift === lift);
+
+    if (liftDiagnosis?.status === "ready") {
+      const { error: snapshotError } = await supabase.from("diagnosis_snapshots").insert({
+        user_id: user.id,
+        lift,
+        sticking_point: liftDiagnosis.stickingPoint,
+        confidence: liftDiagnosis.count / liftDiagnosis.totalTaggedMisses,
+      });
+      if (snapshotError) {
+        console.error("[logSet] diagnosis_snapshots insert failed:", snapshotError);
+      }
     }
   }
 

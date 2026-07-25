@@ -5,6 +5,19 @@ import type { SBDLift } from "@/lib/standards/benchmarks";
 import type { MainLift } from "@/lib/lifting/constants";
 import type { Unit } from "@/lib/lifting/plates";
 import { formatPrescriptionDetail, type ExercisePrescription } from "@/lib/standards/stickingPoints";
+import type { TrendDirection, TrendResult } from "@/lib/standards/trend";
+
+const TREND_LABELS: Record<TrendDirection, string> = {
+  worsening: "Worsening",
+  improving: "Improving",
+  stable: "Stable",
+};
+
+const TREND_STYLES: Record<TrendDirection, string> = {
+  worsening: "text-red-400",
+  improving: "text-green-400",
+  stable: "text-neutral-400",
+};
 
 const TIER_STYLES: Record<Tier, string> = {
   Untrained: "bg-neutral-800 text-neutral-300",
@@ -62,11 +75,13 @@ export function StandardsPanel({
   unit,
   hasProfile,
   percentileEstimates = {},
+  trends = [],
 }: {
   diagnosis: Diagnosis;
   unit: Unit;
   hasProfile: boolean;
   percentileEstimates?: Partial<Record<SBDLift, string>>;
+  trends?: TrendResult[];
 }) {
   if (!hasProfile) {
     return (
@@ -221,6 +236,7 @@ export function StandardsPanel({
 
         const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
         const connectedRatio = diagnosis.laggingRatios.find((r) => r.connectedDiagnosis === d);
+        const trend = trends.find((t) => t.lift === d.lift && t.stickingPoint === d.stickingPoint);
 
         return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
@@ -245,6 +261,15 @@ export function StandardsPanel({
                 </>
               )}
             </p>
+            {trend && (
+              <p className="mb-4 text-sm text-neutral-400">
+                Trend: <span className={`font-semibold ${TREND_STYLES[trend.direction]}`}>
+                  {TREND_LABELS[trend.direction]}
+                </span>{" "}
+                — {trend.recentCount} tagged {trend.recentCount === 1 ? "miss" : "misses"} here in the
+                last 4 weeks vs {trend.priorCount} in the 4 weeks before that.
+              </p>
+            )}
             <ul className="space-y-3">
               {d.prescriptions.map((p) => (
                 <li key={p.exercise} className="text-sm">

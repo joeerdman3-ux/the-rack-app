@@ -26,6 +26,7 @@ import {
 } from "@/lib/standards/benchmarks";
 import type { RatioThresholds } from "@/lib/standards/tables";
 import { mapPrescriptionRows } from "@/lib/standards/stickingPoints";
+import { computeTrends } from "@/lib/standards/trend";
 
 const SBD_LIFTS: SBDLift[] = ["Squat", "Bench Press", "Deadlift"];
 
@@ -196,6 +197,17 @@ export default async function DashboardPage() {
       }
     }
   }
+
+  // Trend tracking (v1, ungated for now — see diagnosis_snapshots'
+  // migration comment): every row here was written by logSet() at the
+  // moment a qualifying tagged set landed on a "ready" diagnosis.
+  // computeTrends() (pure, DB-free) does the grouping/gating/direction
+  // work — reused as-is here, not reimplemented.
+  const { data: snapshotRows } = await supabase
+    .from("diagnosis_snapshots")
+    .select("lift, sticking_point, snapshot_date")
+    .eq("user_id", user.id);
+  const trends = computeTrends(snapshotRows ?? []);
 
   // For the Accessory logging picker — unrelated to the main-lift/standards
   // data above.
@@ -461,6 +473,7 @@ export default async function DashboardPage() {
           unit={unit}
           hasProfile={hasProfile}
           percentileEstimates={percentileEstimates}
+          trends={trends}
         />
       </div>
     </div>
