@@ -6,6 +6,7 @@ import { formatSetsReps } from "@/lib/programs/setsReps";
 import { ExerciseSearchPicker, type ExercisePickerOption } from "@/components/ExerciseSearchPicker";
 import { fromKg } from "@/lib/standards/benchmarks";
 import type { Unit } from "@/lib/lifting/plates";
+import type { AccessorySuggestion } from "@/lib/programs/accessorySuggestions";
 
 // Editing existing values only — no reordering/add/remove here, that stays
 // in ProgramExerciseForm (add) and the plain exercise list (no delete yet).
@@ -23,6 +24,7 @@ export function ProgramExerciseEditForm({
   trainingMaxKg,
   action,
   swapAction,
+  suggestion = null,
 }: {
   id: string;
   programId: string;
@@ -37,10 +39,23 @@ export function ProgramExerciseEditForm({
   trainingMaxKg: number | null;
   action: typeof updateProgramExercise;
   swapAction: typeof swapProgramExercise;
+  suggestion?: AccessorySuggestion | null;
 }) {
   const [editing, setEditing] = useState(false);
   const [changingExercise, setChangingExercise] = useState(false);
+  const [acceptingSuggestion, setAcceptingSuggestion] = useState(false);
   const setsRepsDisplay = formatSetsReps(sets, reps, isAmrap);
+
+  async function acceptSuggestion() {
+    if (!suggestion) return;
+    setAcceptingSuggestion(true);
+    const formData = new FormData();
+    formData.set("program_id", programId);
+    formData.set("program_exercise_id", id);
+    formData.set("exercise_id", suggestion.suggestedExerciseId);
+    await swapAction(formData);
+    setAcceptingSuggestion(false);
+  }
 
   // Same calculation as the Session page's resolved view — rounded to 1
   // decimal, no loadable-increment rounding here, since that's only
@@ -84,6 +99,23 @@ export function ProgramExerciseEditForm({
           </button>
         </div>
         {note && <p className="mt-0.5 text-xs italic text-neutral-500">{note}</p>}
+        {suggestion && (
+          <div className="mt-1.5 rounded-md border border-orange-900 bg-orange-950/40 px-2.5 py-2">
+            <p className="text-xs text-orange-200">
+              Based on this session, your diagnosis suggests{" "}
+              <span className="font-semibold">{suggestion.suggestedExerciseName}</span> — your
+              most-reported {suggestion.lift} sticking point is {suggestion.stickingPointLabel}.
+            </p>
+            <button
+              type="button"
+              onClick={acceptSuggestion}
+              disabled={acceptingSuggestion}
+              className="mt-1 text-xs font-semibold text-orange-400 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {acceptingSuggestion ? "Applying..." : "Accept suggestion"}
+            </button>
+          </div>
+        )}
       </li>
     );
   }
