@@ -15,6 +15,14 @@ import { ProgramExerciseForm } from "./ProgramExerciseForm";
 import { ProgramExerciseEditForm } from "./ProgramExerciseEditForm";
 import { fromKg } from "@/lib/standards/benchmarks";
 import type { ExerciseMuscleGroup } from "@/lib/lifting/muscleGroups";
+import { diagnose, type TaggedSet } from "@/lib/standards/diagnosis";
+import { STICKING_POINT_LABELS } from "@/lib/standards/stickingPoints";
+import {
+  computeAccessorySuggestions,
+  type AccessorySuggestion,
+  type ReadyLiftPrescription,
+  type SessionProgramExercise,
+} from "@/lib/programs/accessorySuggestions";
 
 interface WeekRow {
   id: string;
@@ -102,9 +110,12 @@ export default async function ProgramPage({
   const exerciseIds = [...new Set(programExercises.map((pe) => pe.exercise_id))];
   const { data: exerciseNameRows } =
     exerciseIds.length > 0
-      ? await supabase.from("exercises").select("id, name").in("id", exerciseIds)
+      ? await supabase.from("exercises").select("id, name, primary_lift").in("id", exerciseIds)
       : { data: [] };
   const exerciseNameById = new Map((exerciseNameRows ?? []).map((e) => [e.id, e.name]));
+  const primaryLiftByExerciseId = new Map(
+    (exerciseNameRows ?? []).map((e) => [e.id, e.primary_lift]),
+  );
 
   const { data: allExercisesRaw } = await supabase
     .from("exercises")
@@ -160,6 +171,79 @@ export default async function ProgramPage({
       exercisesBySession.set(pe.program_session_id, []);
     }
     exercisesBySession.get(pe.program_session_id)!.push(pe);
+  }
+
+  // Diagnosis-informed accessory swap suggestions (v1, investigation-
+  // approved: no schema change, heuristic over existing data). Reuses the
+  // actual diagnose() from diagnosis.ts (not reimplemented) with the same
+  // benign stand-in args used by logSet()'s snapshot hook — bests/gender/
+  // bodyweight/sbdThresholdsKg only affect standings/weakestLifts, which
+  // only matter for the zero-tagged-set edge case; a "ready" result can
+  // only exist for a lift with >=1 tagged set already, so those stand-ins
+  // can't change which lifts come back "ready" here.
+  const { data: taggedRows } = await supabase
+    .from("workouts")
+    .select("lift, sticking_point, logged_date, stalled")
+    .eq("user_id", user.id)
+    .or("missed.eq.true,stalled.eq.true");
+  const taggedSets: TaggedSet[] = taggedRows ?? [];
+  const diagnosis = diagnose({}, null, null, taggedSets, "lb", {});
+  const readyDiagnoses = diagnosis.stickingPointDiagnoses.filter(
+    (d): d is Extract<typeof d, { status: "ready" }> => d.status === "ready",
+  );
+
+  // Only the top-ranked (lowest sort_order) prescription per sticking
+  // point is used as "the" suggested exercise — same "one specific,
+  // nameable" spirit as diagnosis.ts only connecting a lagging ratio to a
+  // "ready" (not "tied") diagnosis.
+  const readyLiftPrescriptions: ReadyLiftPrescription[] = [];
+  if (readyDiagnoses.length > 0) {
+    const stickingPoints = [...new Set(readyDiagnoses.map((d) => d.stickingPoint))];
+    const { data: topPrescriptionRows } = await supabase
+      .from("sticking_point_prescriptions")
+      .select("sticking_point, exercise_id, sort_order")
+      .in("sticking_point", stickingPoints)
+      .order("sort_order", { ascending: true });
+
+    const topExerciseIdByStickingPoint = new Map<string, string>();
+    for (const row of topPrescriptionRows ?? []) {
+      if (!topExerciseIdByStickingPoint.has(row.sticking_point)) {
+        topExerciseIdByStickingPoint.set(row.sticking_point, row.exercise_id);
+      }
+    }
+
+    const prescriptionExerciseIds = [...new Set(topExerciseIdByStickingPoint.values())];
+    const { data: prescriptionExerciseRows } =
+      prescriptionExerciseIds.length > 0
+        ? await supabase.from("exercises").select("id, name").in("id", prescriptionExerciseIds)
+        : { data: [] };
+    const prescriptionExerciseNameById = new Map(
+      (prescriptionExerciseRows ?? []).map((e) => [e.id, e.name]),
+    );
+
+    for (const d of readyDiagnoses) {
+      const suggestedExerciseId = topExerciseIdByStickingPoint.get(d.stickingPoint);
+      if (!suggestedExerciseId) continue;
+      readyLiftPrescriptions.push({
+        lift: d.lift,
+        stickingPointLabel: STICKING_POINT_LABELS[d.stickingPoint],
+        suggestedExerciseId,
+        suggestedExerciseName: prescriptionExerciseNameById.get(suggestedExerciseId) ?? "Unknown exercise",
+      });
+    }
+  }
+
+  const suggestionByProgramExerciseId = new Map<string, AccessorySuggestion>();
+  for (const sessionExercises of exercisesBySession.values()) {
+    const sessionInput: SessionProgramExercise[] = sessionExercises.map((pe) => ({
+      programExerciseId: pe.id,
+      exerciseId: pe.exercise_id,
+      primaryLift: primaryLiftByExerciseId.get(pe.exercise_id) ?? "general",
+      percentOfMax: pe.percent_of_max,
+    }));
+    for (const suggestion of computeAccessorySuggestions(sessionInput, readyLiftPrescriptions)) {
+      suggestionByProgramExerciseId.set(suggestion.programExerciseId, suggestion);
+    }
   }
 
   const nextWeekNumber =
@@ -342,6 +426,7 @@ export default async function ProgramPage({
                                 trainingMaxKg={trainingMaxKgByExerciseId.get(pe.exercise_id) ?? null}
                                 action={updateProgramExercise}
                                 swapAction={swapProgramExercise}
+                                suggestion={suggestionByProgramExerciseId.get(pe.id) ?? null}
                               />
                             ))}
                           </ul>
