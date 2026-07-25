@@ -20,6 +20,7 @@ import { STICKING_POINT_LABELS } from "@/lib/standards/stickingPoints";
 import {
   computeAccessorySuggestions,
   type AccessorySuggestion,
+  type ExerciseCategory,
   type ReadyLiftPrescription,
   type SessionProgramExercise,
 } from "@/lib/programs/accessorySuggestions";
@@ -201,18 +202,26 @@ export default async function ProgramPage({
     const stickingPoints = [...new Set(readyDiagnoses.map((d) => d.stickingPoint))];
     const { data: topPrescriptionRows } = await supabase
       .from("sticking_point_prescriptions")
-      .select("sticking_point, exercise_id, sort_order")
+      .select("sticking_point, exercise_id, sort_order, category")
       .in("sticking_point", stickingPoints)
       .order("sort_order", { ascending: true });
 
-    const topExerciseIdByStickingPoint = new Map<string, string>();
+    const topPrescriptionByStickingPoint = new Map<
+      string,
+      { exerciseId: string; category: ExerciseCategory }
+    >();
     for (const row of topPrescriptionRows ?? []) {
-      if (!topExerciseIdByStickingPoint.has(row.sticking_point)) {
-        topExerciseIdByStickingPoint.set(row.sticking_point, row.exercise_id);
+      if (!topPrescriptionByStickingPoint.has(row.sticking_point)) {
+        topPrescriptionByStickingPoint.set(row.sticking_point, {
+          exerciseId: row.exercise_id,
+          category: row.category,
+        });
       }
     }
 
-    const prescriptionExerciseIds = [...new Set(topExerciseIdByStickingPoint.values())];
+    const prescriptionExerciseIds = [
+      ...new Set([...topPrescriptionByStickingPoint.values()].map((p) => p.exerciseId)),
+    ];
     const { data: prescriptionExerciseRows } =
       prescriptionExerciseIds.length > 0
         ? await supabase.from("exercises").select("id, name").in("id", prescriptionExerciseIds)
@@ -222,14 +231,38 @@ export default async function ProgramPage({
     );
 
     for (const d of readyDiagnoses) {
-      const suggestedExerciseId = topExerciseIdByStickingPoint.get(d.stickingPoint);
-      if (!suggestedExerciseId) continue;
+      const topPrescription = topPrescriptionByStickingPoint.get(d.stickingPoint);
+      if (!topPrescription) continue;
       readyLiftPrescriptions.push({
         lift: d.lift,
         stickingPointLabel: STICKING_POINT_LABELS[d.stickingPoint],
-        suggestedExerciseId,
-        suggestedExerciseName: prescriptionExerciseNameById.get(suggestedExerciseId) ?? "Unknown exercise",
+        suggestedExerciseId: topPrescription.exerciseId,
+        suggestedExerciseName:
+          prescriptionExerciseNameById.get(topPrescription.exerciseId) ?? "Unknown exercise",
+        category: topPrescription.category,
       });
+    }
+  }
+
+  // Category (compound/isolation) of the accessory currently occupying a
+  // slot, so a swap suggestion can be limited to same-category exercises
+  // (never swap a compound prescription into an isolation slot or vice
+  // versa). Sourced from sticking_point_prescriptions — the only table
+  // with a category column; exercises has none. An exercise that never
+  // appears in sticking_point_prescriptions under any sticking point has
+  // no known category (null), which computeAccessorySuggestions treats
+  // as "no match" rather than guessing.
+  const { data: categoryRows } =
+    exerciseIds.length > 0
+      ? await supabase
+          .from("sticking_point_prescriptions")
+          .select("exercise_id, category")
+          .in("exercise_id", exerciseIds)
+      : { data: [] };
+  const categoryByExerciseId = new Map<string, ExerciseCategory>();
+  for (const row of categoryRows ?? []) {
+    if (!categoryByExerciseId.has(row.exercise_id)) {
+      categoryByExerciseId.set(row.exercise_id, row.category);
     }
   }
 
@@ -240,6 +273,7 @@ export default async function ProgramPage({
       exerciseId: pe.exercise_id,
       primaryLift: primaryLiftByExerciseId.get(pe.exercise_id) ?? "general",
       percentOfMax: pe.percent_of_max,
+      category: categoryByExerciseId.get(pe.exercise_id) ?? null,
     }));
     for (const suggestion of computeAccessorySuggestions(sessionInput, readyLiftPrescriptions)) {
       suggestionByProgramExerciseId.set(suggestion.programExerciseId, suggestion);
