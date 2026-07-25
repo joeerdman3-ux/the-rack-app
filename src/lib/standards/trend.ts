@@ -80,13 +80,28 @@ export function computeTrends(snapshots: DiagnosisSnapshotRow[], now: Date = new
       else if (date >= priorBoundary) priorCount++;
     }
 
+    // priorCount === 0 doesn't mean "genuinely zero misses in that
+    // window" the same way a populated group with a real history would —
+    // for a brand-new (lift, sticking_point) pair, the 14-day span gate
+    // can clear well before any snapshot is old enough to fall before the
+    // 28-day recentBoundary, so ALL of a first-time group's snapshots
+    // land in the recent window with no prior-window baseline to compare
+    // against at all. Without this guard, recentCount=3/priorCount=0
+    // reads as delta=3 -> "Worsening" on literally every user's very
+    // first trend reveal, which is a data-availability artifact, not a
+    // real signal. Only recentCount=0 with priorCount>0 (a genuinely
+    // quiet recent period after an established history) still computes a
+    // real direction — that group's existence already proves a "before"
+    // period was actually observed.
     const delta = recentCount - priorCount;
     const direction: TrendDirection =
-      delta >= STABLE_DELTA_THRESHOLD
-        ? "worsening"
-        : delta <= -STABLE_DELTA_THRESHOLD
-          ? "improving"
-          : "stable";
+      priorCount === 0
+        ? "stable"
+        : delta >= STABLE_DELTA_THRESHOLD
+          ? "worsening"
+          : delta <= -STABLE_DELTA_THRESHOLD
+            ? "improving"
+            : "stable";
 
     results.push({
       lift: rows[0].lift,
