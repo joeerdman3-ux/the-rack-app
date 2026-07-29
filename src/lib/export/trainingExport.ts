@@ -9,6 +9,7 @@ export interface WorkoutExportRow {
   stalled: boolean;
   sticking_point: string | null;
   e1rm: number;
+  notes: string | null;
   logged_date: string;
   logged_at: string;
 }
@@ -60,7 +61,7 @@ export function buildExportRows(
       stalled: w.stalled,
       stickingPoint: w.sticking_point,
       e1rm: w.e1rm,
-      notes: null,
+      notes: w.notes,
       loggedAt: w.logged_at,
     })),
     ...accessoryRows.map((a) => ({

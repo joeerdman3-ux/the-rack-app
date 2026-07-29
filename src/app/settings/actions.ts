@@ -95,7 +95,7 @@ export async function exportTrainingData(): Promise<
 
   const { data: workoutRows, error: workoutsError } = await supabase
     .from("workouts")
-    .select("lift, weight, reps, rpe, missed, stalled, sticking_point, e1rm, logged_date, logged_at")
+    .select("lift, weight, reps, rpe, missed, stalled, sticking_point, e1rm, notes, logged_date, logged_at")
     .eq("user_id", user.id);
   if (workoutsError) {
     console.error("[exportTrainingData] workouts query failed:", workoutsError);
