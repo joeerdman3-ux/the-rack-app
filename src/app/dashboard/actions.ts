@@ -24,9 +24,21 @@ export async function logSet(formData: FormData): Promise<
   const stalled = formData.get("stalled") === "on";
   const stickingPointRaw = formData.get("sticking_point") as string;
   const stickingPoint = (missed || stalled) && stickingPointRaw ? stickingPointRaw : null;
+  const notesRaw = (formData.get("notes") as string) || "";
+  const notes = notesRaw.trim() || null;
+  const videoUrlRaw = ((formData.get("video_url") as string) || "").trim();
+  const videoUrl = videoUrlRaw || null;
 
   if (!lift || !Number.isFinite(weight) || weight <= 0 || !Number.isInteger(reps) || reps < 1) {
     return { success: false, error: "Enter a valid lift, weight, and reps." };
+  }
+
+  if (videoUrl) {
+    try {
+      new URL(videoUrl);
+    } catch {
+      return { success: false, error: "Video link doesn't look like a valid URL." };
+    }
   }
 
   const e1rm = epley1RM(weight, reps);
@@ -59,6 +71,8 @@ export async function logSet(formData: FormData): Promise<
       missed,
       stalled,
       sticking_point: stickingPoint,
+      notes,
+      video_url: videoUrl,
       logged_date: loggedDate,
     })
     .select("id")

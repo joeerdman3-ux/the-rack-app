@@ -258,6 +258,8 @@ export default async function DashboardPage() {
         missed: boolean;
         stalled: boolean;
         e1rm: number;
+        notes: string | null;
+        video_url: string | null;
       }
     | {
         type: "accessory";
@@ -283,6 +285,8 @@ export default async function DashboardPage() {
         missed: set.missed,
         stalled: set.stalled,
         e1rm: set.e1rm,
+        notes: set.notes,
+        video_url: set.video_url,
       }),
     ),
     ...(todaysAccessoryLogs ?? []).map(
@@ -425,6 +429,19 @@ export default async function DashboardPage() {
                         )}
                       </p>
                       <p className="text-sm text-neutral-500">e1RM: {entry.e1rm}{unit}</p>
+                      {entry.notes && (
+                        <p className="text-sm text-neutral-500">{entry.notes}</p>
+                      )}
+                      {entry.video_url && (
+                        <a
+                          href={entry.video_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-orange-500 hover:underline"
+                        >
+                          Watch
+                        </a>
+                      )}
                     </div>
                     <form action={deleteSet.bind(null, entry.id)}>
                       <button

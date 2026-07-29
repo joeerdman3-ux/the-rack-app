@@ -83,6 +83,10 @@ export type Database = {
           logged_date: string;
           logged_at: string;
           created_at: string;
+          // Added in 0029. notes mirrors accessory_logs.notes exactly.
+          // video_url is Main Lift-only — no equivalent on accessory_logs.
+          notes: string | null;
+          video_url: string | null;
         };
         Insert: {
           id?: string;
@@ -98,6 +102,8 @@ export type Database = {
           logged_date: string;
           logged_at?: string;
           created_at?: string;
+          notes?: string | null;
+          video_url?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["workouts"]["Insert"]>;
         Relationships: [];
