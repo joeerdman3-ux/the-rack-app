@@ -193,10 +193,15 @@ export default async function ProgramPage({
     (d): d is Extract<typeof d, { status: "ready" }> => d.status === "ready",
   );
 
-  // Only the top-ranked (lowest sort_order) prescription per sticking
-  // point is used as "the" suggested exercise — same "one specific,
-  // nameable" spirit as diagnosis.ts only connecting a lagging ratio to a
-  // "ready" (not "tied") diagnosis.
+  // The top-ranked (lowest sort_order) prescription per (sticking point,
+  // category) is used as "the" suggested exercise for that category — same
+  // "one specific, nameable" spirit as diagnosis.ts only connecting a
+  // lagging ratio to a "ready" (not "tied") diagnosis. Keyed by category as
+  // well as sticking point (not sticking point alone): picking only the
+  // single globally-top row per sticking point would mean whichever
+  // category didn't happen to sort first could never get a suggestion at
+  // all, no matter how many rows exist for it — so up to one compound AND
+  // one isolation prescription can both surface per lift.
   const readyLiftPrescriptions: ReadyLiftPrescription[] = [];
   if (readyDiagnoses.length > 0) {
     const stickingPoints = [...new Set(readyDiagnoses.map((d) => d.stickingPoint))];
@@ -206,13 +211,14 @@ export default async function ProgramPage({
       .in("sticking_point", stickingPoints)
       .order("sort_order", { ascending: true });
 
-    const topPrescriptionByStickingPoint = new Map<
+    const topPrescriptionByKey = new Map<
       string,
       { exerciseId: string; category: ExerciseCategory }
     >();
     for (const row of topPrescriptionRows ?? []) {
-      if (!topPrescriptionByStickingPoint.has(row.sticking_point)) {
-        topPrescriptionByStickingPoint.set(row.sticking_point, {
+      const key = `${row.sticking_point}::${row.category}`;
+      if (!topPrescriptionByKey.has(key)) {
+        topPrescriptionByKey.set(key, {
           exerciseId: row.exercise_id,
           category: row.category,
         });
@@ -220,7 +226,7 @@ export default async function ProgramPage({
     }
 
     const prescriptionExerciseIds = [
-      ...new Set([...topPrescriptionByStickingPoint.values()].map((p) => p.exerciseId)),
+      ...new Set([...topPrescriptionByKey.values()].map((p) => p.exerciseId)),
     ];
     const { data: prescriptionExerciseRows } =
       prescriptionExerciseIds.length > 0
@@ -230,17 +236,20 @@ export default async function ProgramPage({
       (prescriptionExerciseRows ?? []).map((e) => [e.id, e.name]),
     );
 
+    const categories: ExerciseCategory[] = ["compound", "isolation"];
     for (const d of readyDiagnoses) {
-      const topPrescription = topPrescriptionByStickingPoint.get(d.stickingPoint);
-      if (!topPrescription) continue;
-      readyLiftPrescriptions.push({
-        lift: d.lift,
-        stickingPointLabel: STICKING_POINT_LABELS[d.stickingPoint],
-        suggestedExerciseId: topPrescription.exerciseId,
-        suggestedExerciseName:
-          prescriptionExerciseNameById.get(topPrescription.exerciseId) ?? "Unknown exercise",
-        category: topPrescription.category,
-      });
+      for (const category of categories) {
+        const topPrescription = topPrescriptionByKey.get(`${d.stickingPoint}::${category}`);
+        if (!topPrescription) continue;
+        readyLiftPrescriptions.push({
+          lift: d.lift,
+          stickingPointLabel: STICKING_POINT_LABELS[d.stickingPoint],
+          suggestedExerciseId: topPrescription.exerciseId,
+          suggestedExerciseName:
+            prescriptionExerciseNameById.get(topPrescription.exerciseId) ?? "Unknown exercise",
+          category: topPrescription.category,
+        });
+      }
     }
   }
 
