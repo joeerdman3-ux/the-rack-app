@@ -38,14 +38,17 @@ export default async function Home() {
       </div>
 
       <div className="mt-8 flex flex-col items-center gap-3">
-        <Link
-          href="/signup"
-          className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500"
-        >
-          Sign up
-        </Link>
+        <div className="flex flex-col items-center gap-1.5">
+          <Link
+            href="/signup"
+            className="rounded-md bg-orange-600 px-6 py-3 font-semibold text-white hover:bg-orange-500"
+          >
+            Sign up
+          </Link>
+          <p className="text-xs text-neutral-500">Free to start — no credit card required.</p>
+        </div>
         <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-300">
-          Already have an account? Log in
+          Already have an account? <span className="underline">Log in</span>
         </Link>
       </div>
     </div>
