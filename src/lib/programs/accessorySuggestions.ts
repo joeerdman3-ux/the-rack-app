@@ -40,14 +40,19 @@ export interface AccessorySuggestion {
 //
 // Among the session's other rows, only ones whose exercise category
 // (compound/isolation, sourced from sticking_point_prescriptions —
-// null when that exercise never appears there, i.e. unknown) matches the
-// prescription's category are eligible: swapping a compound prescription
-// into an isolation slot (or vice versa) changes what the slot is for,
-// not just which exercise fills it. A null category is never treated as
-// a match — no signal means no guess. At most ONE suggestion is ever
-// returned per session (the first eligible slot in sort_order), not one
-// per matching row, so the same prescription doesn't get duplicated
-// across every accessory in the session.
+// null when that exercise never appears there, i.e. unknown) matches a
+// ready prescription's category are eligible: swapping a compound
+// prescription into an isolation slot (or vice versa) changes what the
+// slot is for, not just which exercise fills it. A null category is never
+// treated as a match — no signal means no guess. readyLiftPrescriptions
+// may contain up to one entry per (lift, category) — e.g. both a compound
+// and an isolation pick for the same lift — so an isolation slot and a
+// compound slot in the same session can each be matched against their own
+// category's prescription, not just whichever category happened to be
+// looked up first. At most ONE suggestion is ever returned per session
+// (the first eligible slot in sort_order), not one per matching row, so
+// the same prescription doesn't get duplicated across every accessory in
+// the session.
 export function computeAccessorySuggestions(
   sessionExercises: SessionProgramExercise[],
   readyLiftPrescriptions: ReadyLiftPrescription[],
@@ -58,18 +63,22 @@ export function computeAccessorySuggestions(
   if (mainLiftRows.length !== 1) return [];
 
   const sessionLift = PRIMARY_LIFT_TO_MAIN_LIFT[mainLiftRows[0].primaryLift];
-  const prescription = readyLiftPrescriptions.find((p) => p.lift === sessionLift);
-  if (!prescription) return [];
+  const prescriptionByCategory = new Map<ExerciseCategory, ReadyLiftPrescription>();
+  for (const p of readyLiftPrescriptions) {
+    if (p.lift === sessionLift) prescriptionByCategory.set(p.category, p);
+  }
+  if (prescriptionByCategory.size === 0) return [];
 
   const mainLiftRowId = mainLiftRows[0].programExerciseId;
-  const candidate = sessionExercises.find(
-    (e) =>
-      e.programExerciseId !== mainLiftRowId &&
-      e.exerciseId !== prescription.suggestedExerciseId &&
-      e.category === prescription.category,
-  );
+  const candidate = sessionExercises.find((e) => {
+    if (e.programExerciseId === mainLiftRowId) return false;
+    if (e.category == null) return false;
+    const prescription = prescriptionByCategory.get(e.category);
+    return prescription != null && e.exerciseId !== prescription.suggestedExerciseId;
+  });
   if (!candidate) return [];
 
+  const prescription = prescriptionByCategory.get(candidate.category!)!;
   return [
     {
       programExerciseId: candidate.programExerciseId,

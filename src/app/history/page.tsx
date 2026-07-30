@@ -127,6 +127,19 @@ export default async function HistoryPage() {
                             e1RM: {set.e1rm}
                             {unit}
                           </p>
+                          {set.notes && (
+                            <p className="text-sm text-neutral-500">{set.notes}</p>
+                          )}
+                          {set.video_url && (
+                            <a
+                              href={set.video_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-sm text-orange-500 hover:underline"
+                            >
+                              Watch
+                            </a>
+                          )}
                         </div>
                         <form action={deleteSet.bind(null, set.id)}>
                           <button

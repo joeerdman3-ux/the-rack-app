@@ -64,7 +64,14 @@ export interface ExerciseRow {
 // Pure join: matches prescription rows to their exercise name in JS rather
 // than relying on a typed PostgREST embed (avoids the fragile FK-embed
 // typing that's bitten this hand-written Database type before). Rows are
-// assumed pre-sorted by sort_order by the caller's query.
+// assumed pre-sorted by sort_order by the caller's query — but sort_order
+// is its own independent 1,2,3 sequence PER category, not a single ranking
+// across the whole sticking point, so compound and isolation rows can
+// share the same number and interleave if left in raw sort_order order. A
+// stable sort by category regroups them (compound first, then isolation)
+// while preserving each group's existing sort_order-ascending order —
+// only correct because the input is already sort_order-sorted; this
+// doesn't re-sort within a group, just partitions by category.
 //
 // e1rm must already be in the caller's display unit, not kg — unlike
 // program_training_maxes.training_max_kg, workouts.e1rm (and so bests[lift]
@@ -77,7 +84,11 @@ export function mapPrescriptionRows(
   e1rm: number | null,
 ): ExercisePrescription[] {
   const nameById = new Map(exerciseRows.map((e) => [e.id, e.name]));
-  return prescriptionRows.map((row) => ({
+  const grouped = [...prescriptionRows].sort((a, b) => {
+    if (a.category === b.category) return 0;
+    return a.category === "compound" ? -1 : 1;
+  });
+  return grouped.map((row) => ({
     exercise: nameById.get(row.exercise_id) ?? "Unknown exercise",
     rationale: row.rationale,
     setsReps: row.sets_reps,

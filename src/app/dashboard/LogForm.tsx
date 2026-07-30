@@ -199,6 +199,31 @@ export function LogForm({
           </div>
         )}
 
+        <div>
+          <label htmlFor="notes" className="mb-1 block text-sm text-neutral-300">
+            Notes
+          </label>
+          <textarea
+            id="notes"
+            name="notes"
+            rows={2}
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
+          />
+        </div>
+
+        <div>
+          <label htmlFor="video_url" className="mb-1 block text-sm text-neutral-300">
+            Video link <span className="text-neutral-500">(optional)</span>
+          </label>
+          <input
+            id="video_url"
+            name="video_url"
+            type="url"
+            placeholder="https://..."
+            className="w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-white outline-none focus:border-orange-500"
+          />
+        </div>
+
         <button
           type="submit"
           className="w-full rounded-md bg-orange-600 px-3 py-2 font-semibold text-white hover:bg-orange-500"
