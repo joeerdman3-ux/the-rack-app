@@ -48,7 +48,7 @@ export default async function Home() {
           <p className="text-xs text-neutral-500">Free to start — no credit card required.</p>
         </div>
         <Link href="/login" className="text-sm text-neutral-500 hover:text-neutral-300">
-          Already have an account? Log in
+          Already have an account? <span className="underline">Log in</span>
         </Link>
       </div>
     </div>
