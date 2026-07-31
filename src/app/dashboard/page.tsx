@@ -27,6 +27,7 @@ import {
 import type { RatioThresholds } from "@/lib/standards/tables";
 import { mapPrescriptionRows } from "@/lib/standards/stickingPoints";
 import { computeTrends } from "@/lib/standards/trend";
+import { computeRatioTrends } from "@/lib/standards/ratioTrend";
 
 const SBD_LIFTS: SBDLift[] = ["Squat", "Bench Press", "Deadlift"];
 
@@ -208,6 +209,20 @@ export default async function DashboardPage() {
     .select("lift, sticking_point, snapshot_date")
     .eq("user_id", user.id);
   const trends = computeTrends(snapshotRows ?? []);
+
+  // Cross-lift ratio trend (v1, ungated for now — same precedent as
+  // diagnosis_snapshots trend tracking above). Reuses personal_records
+  // (not diagnosis_snapshots — its shape/write-cadence don't fit a ratio
+  // reconstruction) to piecewise-reconstruct each lagging ratio's value at
+  // a prior reference point. computeRatioTrends() is pure/DB-free and only
+  // meaningful for pairs already in laggingRatios (a lagging lift sits
+  // below `expected`, which is what makes "ratio rising = improving"
+  // unambiguous) — never called for the full RATIO_BENCHMARKS set.
+  const { data: personalRecordRows } = await supabase
+    .from("personal_records")
+    .select("lift, e1rm, unit, achieved_at")
+    .eq("user_id", user.id);
+  const ratioTrends = computeRatioTrends(diagnosis.laggingRatios, personalRecordRows ?? []);
 
   // For the Accessory logging picker — unrelated to the main-lift/standards
   // data above.
@@ -491,6 +506,7 @@ export default async function DashboardPage() {
           hasProfile={hasProfile}
           percentileEstimates={percentileEstimates}
           trends={trends}
+          ratioTrends={ratioTrends}
         />
       </div>
     </div>

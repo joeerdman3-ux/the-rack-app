@@ -85,6 +85,17 @@ export async function logSet(formData: FormData): Promise<
 
   const isNewPR = !missed && (priorBestE1rm === null || e1rm > priorBestE1rm);
   if (isNewPR) {
+    // unit is read from the profile rather than trusted from the client —
+    // it's the same source of truth every other unit-aware read in this
+    // app already defers to, and it captures "what was actually active
+    // when this PR landed" for the ratio-trend reconstruction in
+    // ratioTrend.ts (0030).
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("unit")
+      .eq("id", user.id)
+      .single();
+
     const { error: prError } = await supabase.from("personal_records").insert({
       user_id: user.id,
       lift,
@@ -92,6 +103,7 @@ export async function logSet(formData: FormData): Promise<
       weight,
       reps,
       workout_id: newWorkout.id,
+      unit: profile?.unit ?? null,
     });
     if (prError) {
       console.error("[logSet] personal_records insert failed:", prError);
