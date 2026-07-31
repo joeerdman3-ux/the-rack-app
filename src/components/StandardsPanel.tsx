@@ -6,6 +6,7 @@ import type { MainLift } from "@/lib/lifting/constants";
 import type { Unit } from "@/lib/lifting/plates";
 import { formatPrescriptionDetail, type ExercisePrescription } from "@/lib/standards/stickingPoints";
 import type { TrendDirection, TrendResult } from "@/lib/standards/trend";
+import type { RatioTrendResult } from "@/lib/standards/ratioTrend";
 
 const TREND_LABELS: Record<TrendDirection, string> = {
   worsening: "Worsening",
@@ -70,18 +71,47 @@ function PrescriptionItem({ p, unit }: { p: ExercisePrescription; unit: Unit }) 
   );
 }
 
+// Shown wherever a lagging ratio's message renders (standalone or folded
+// into a connected sticking-point card). No line at all when direction is
+// null — same "omit rather than guess" convention the sticking-point
+// trend line already follows for insufficient data, not a distinct
+// "not enough data yet" message.
+function RatioTrendNote({ trend }: { trend: RatioTrendResult | undefined }) {
+  if (!trend) return null;
+  return (
+    <>
+      {trend.direction && (
+        <p className="mt-1 text-sm text-neutral-400">
+          Trend: <span className={`font-semibold ${TREND_STYLES[trend.direction]}`}>
+            {TREND_LABELS[trend.direction]}
+          </span>{" "}
+          — {trend.priorRatio!.toFixed(2)}x roughly 90 days ago vs {trend.currentRatio.toFixed(2)}x now.
+        </p>
+      )}
+      {trend.staleLift && (
+        <p className="mt-1 text-xs text-neutral-600">
+          {trend.staleLift} hasn&apos;t had a new PR in {trend.staleDays}+ days — this comparison may
+          be out of date.
+        </p>
+      )}
+    </>
+  );
+}
+
 export function StandardsPanel({
   diagnosis,
   unit,
   hasProfile,
   percentileEstimates = {},
   trends = [],
+  ratioTrends = [],
 }: {
   diagnosis: Diagnosis;
   unit: Unit;
   hasProfile: boolean;
   percentileEstimates?: Partial<Record<SBDLift, string>>;
   trends?: TrendResult[];
+  ratioTrends?: RatioTrendResult[];
 }) {
   if (!hasProfile) {
     return (
@@ -174,12 +204,20 @@ export function StandardsPanel({
                 — focus your accessory work here.
               </p>
             )}
-            {standaloneLaggingRatios.map((r) => (
-              <p key={r.label} className="text-neutral-300">
-                <span className="font-semibold text-white">{r.label}</span> is lagging:
-                {" "}{r.actual.toFixed(2)}x actual vs {r.expected.toFixed(2)}x typical. {r.explanation}
-              </p>
-            ))}
+            {standaloneLaggingRatios.map((r) => {
+              const ratioTrend = ratioTrends.find(
+                (rt) => rt.lift === r.lift && rt.referenceLift === r.referenceLift,
+              );
+              return (
+                <div key={r.label}>
+                  <p className="text-neutral-300">
+                    <span className="font-semibold text-white">{r.label}</span> is lagging:
+                    {" "}{r.actual.toFixed(2)}x actual vs {r.expected.toFixed(2)}x typical. {r.explanation}
+                  </p>
+                  <RatioTrendNote trend={ratioTrend} />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
@@ -237,6 +275,11 @@ export function StandardsPanel({
         const percent = Math.round((d.count / d.totalTaggedMisses) * 100);
         const connectedRatio = diagnosis.laggingRatios.find((r) => r.connectedDiagnosis === d);
         const trend = trends.find((t) => t.lift === d.lift && t.stickingPoint === d.stickingPoint);
+        const connectedRatioTrend = connectedRatio
+          ? ratioTrends.find(
+              (rt) => rt.lift === connectedRatio.lift && rt.referenceLift === connectedRatio.referenceLift,
+            )
+          : undefined;
 
         return (
           <div key={d.lift} className="rounded-lg border border-neutral-800 bg-neutral-900 p-6">
@@ -261,6 +304,7 @@ export function StandardsPanel({
                 </>
               )}
             </p>
+            {connectedRatio && <RatioTrendNote trend={connectedRatioTrend} />}
             {trend && (
               <p className="mb-4 text-sm text-neutral-400">
                 Trend: <span className={`font-semibold ${TREND_STYLES[trend.direction]}`}>

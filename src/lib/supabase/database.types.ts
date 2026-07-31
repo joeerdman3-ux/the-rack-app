@@ -118,6 +118,10 @@ export type Database = {
           reps: number;
           workout_id: string | null;
           achieved_at: string;
+          // Added in 0030. Nullable — null on every row predating this
+          // column (no retroactive backfill), populated going forward from
+          // profiles.unit at the moment logSet() writes a new PR.
+          unit: "lb" | "kg" | null;
         };
         Insert: {
           id?: string;
@@ -128,6 +132,7 @@ export type Database = {
           reps: number;
           workout_id?: string | null;
           achieved_at?: string;
+          unit?: "lb" | "kg" | null;
         };
         Update: Partial<Database["public"]["Tables"]["personal_records"]["Insert"]>;
         Relationships: [];

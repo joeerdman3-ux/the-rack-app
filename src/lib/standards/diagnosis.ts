@@ -17,7 +17,7 @@ export interface LiftStanding {
   tier: Tier | null;
 }
 
-interface RatioBenchmark {
+export interface RatioBenchmark {
   key: string;
   label: string;
   numerator: MainLift;
@@ -29,7 +29,7 @@ interface RatioBenchmark {
   explanation: string;
 }
 
-const RATIO_BENCHMARKS: RatioBenchmark[] = [
+export const RATIO_BENCHMARKS: RatioBenchmark[] = [
   {
     key: "benchToSquat",
     label: "Bench relative to squat",
