@@ -27,7 +27,7 @@ export default async function ProgramsPage() {
           </Link>
         </div>
 
-        <form action={createProgram} className="mb-6 flex gap-3">
+        <form action={createProgram} className="flex gap-3">
           <input
             type="text"
             name="name"
@@ -41,6 +41,13 @@ export default async function ProgramsPage() {
             Create Program
           </button>
         </form>
+        <p className="mb-6 mt-2 text-sm text-neutral-500">
+          Building from scratch? Or{" "}
+          <Link href="/templates" className="text-orange-500 hover:underline">
+            start from a ready-made template
+          </Link>{" "}
+          instead — faster if you just want something to follow.
+        </p>
 
         {!programs || programs.length === 0 ? (
           <p className="text-sm text-neutral-500">No programs yet — create one above.</p>

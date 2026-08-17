@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { signOut } from "@/app/auth/actions";
+import { signOut, resendConfirmationEmail } from "@/app/auth/actions";
 import { logSet, deleteSet } from "./actions";
 import { logAccessorySet, deleteAccessoryLog, createExercise } from "./accessoryActions";
 import { LoggingSection } from "./LoggingSection";
 import { StandardsPanel } from "@/components/StandardsPanel";
+import { VerifyEmailBanner } from "@/components/VerifyEmailBanner";
+import { LogoutButton } from "@/components/LogoutButton";
 import {
   diagnose,
   type Bests,
@@ -384,25 +386,30 @@ export default async function DashboardPage() {
             >
               Settings
             </Link>
-            <form action={signOut}>
-              <button
-                type="submit"
-                className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:bg-neutral-900"
-              >
-                Log out
-              </button>
-            </form>
+            <LogoutButton action={signOut} />
           </div>
         </div>
+
+        <VerifyEmailBanner
+          show={!user.email_confirmed_at}
+          resendAction={resendConfirmationEmail}
+        />
 
         {!alreadyOnWaitlist && (
           <Link
             href="/settings"
-            className="mb-6 block text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-2 hover:text-neutral-300 hover:decoration-neutral-500 active:text-neutral-200"
+            className="mb-2 block text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-2 hover:text-neutral-300 hover:decoration-neutral-500 active:text-neutral-200"
           >
             Premium is coming — see what&apos;s included →
           </Link>
         )}
+
+        <Link
+          href="/templates"
+          className="mb-6 block text-sm text-neutral-400 underline decoration-neutral-600 underline-offset-2 hover:text-neutral-300 hover:decoration-neutral-500 active:text-neutral-200"
+        >
+          New here? Browse ready-made programs (or take the quiz to find one) →
+        </Link>
 
         <LoggingSection
           unit={unit}
